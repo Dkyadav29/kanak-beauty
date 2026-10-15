@@ -244,7 +244,7 @@ const CheckoutPage = () => {
           <div className="p-5">
             <h3 className="font-display text-xl font-semibold leading-snug">{c.title}</h3>
             <p className="mt-1 text-sm text-charcoal-500">
-              {c.trainer.name} · {c.durationWeeks} weeks
+              {c.trainer ? `${c.trainer.name} · ` : ''}{c.durationWeeks} weeks
             </p>
             <div className="mt-4 border-t border-ivory-200 pt-4">
               <PriceTag price={c.price} discountPrice={c.discountPrice} currency={c.currency} />

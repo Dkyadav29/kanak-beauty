@@ -53,7 +53,7 @@ def _apply_course_data(course: Course, data: dict, *, existing: bool) -> Course:
     course.short_description = data["short_description"]
     course.description = data["description"]
     course.thumbnail_url = data.get("thumbnail_url") or (course.thumbnail_url if existing else "")
-    course.trainer_id = data["trainer_id"]
+    course.trainer_id = data.get("trainer_id") or None
     course.duration_weeks = data["duration_weeks"]
     course.total_hours = data["total_hours"]
     course.level = data["level"]

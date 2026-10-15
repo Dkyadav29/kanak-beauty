@@ -10,7 +10,7 @@ const Receipt = ({ payment, onClose }: { payment: PaymentTransaction; onClose: (
   <Dialog open onClose={onClose} title="Payment receipt" description={payment.orderId} footer={<><Button variant="ghost" onClick={onClose}>Close</Button><Button onClick={() => window.print()} leftIcon={<FileText className="h-4 w-4" />}>Print / Save as PDF</Button></>}>
     <div className="rounded-2xl border border-ivory-300 p-5">
       <div className="flex items-center justify-between">
-        <p className="font-display text-2xl font-semibold">Kanak Beauty Academy</p>
+        <p className="font-display text-2xl font-semibold">Kanak Beauty Service</p>
         <StatusBadge status={payment.status} />
       </div>
       <KeyValue

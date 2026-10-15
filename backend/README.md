@@ -1,6 +1,6 @@
-# Kanak Beauty Academy — Backend (Django REST Framework + MariaDB)
+# Kanak Beauty Service — Backend (Django REST Framework + MariaDB)
 
-Production-oriented REST API for the Kanak Beauty Academy platform. It implements the contract the React frontend (repo root) already uses: `../docs/API_CONTRACTS.md`. Every protected endpoint enforces role and ownership rules on the server; the frontend's guards are only UX.
+Production-oriented REST API for the Kanak Beauty Service platform. It implements the contract the React frontend (repo root) already uses: `../docs/API_CONTRACTS.md`. Every protected endpoint enforces role and ownership rules on the server; the frontend's guards are only UX.
 
 ## Stack
 

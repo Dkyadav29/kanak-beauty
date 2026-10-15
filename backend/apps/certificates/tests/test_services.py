@@ -21,7 +21,7 @@ def test_trusted_issue_skips_eligibility_and_is_idempotent(enrollment, student, 
     second = services.issue_certificate(student, course, trusted=True)
     assert first.pk == second.pk
     assert Certificate.objects.count() == 1
-    assert first.issued_by == "Kanak Beauty Academy"
+    assert first.issued_by == "Kanak Beauty Service"
     assert first.issued_by_user is None
     assert first.batch == batch
     audit = AuditLog.objects.get(action="certificate.issue")

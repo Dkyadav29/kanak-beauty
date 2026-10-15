@@ -163,8 +163,8 @@ SIMPLE_JWT = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Kanak Beauty Academy API",
-    "DESCRIPTION": "Backend API for the Kanak Beauty Academy training platform (students, courses, batches, payments, certificates, referrals).",
+    "TITLE": "Kanak Beauty Service API",
+    "DESCRIPTION": "Backend API for the Kanak Beauty Service training platform (students, courses, batches, payments, certificates, referrals).",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,

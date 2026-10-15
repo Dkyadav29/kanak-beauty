@@ -1,9 +1,9 @@
 {
-  "name": "kanak-beauty-academy",
+  "name": "kanak-beauty-service",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Kanak Beauty Academy — professional beauty training platform (React + Vite + TypeScript)",
+  "description": "Kanak Beauty Service — professional beauty training platform (React + Vite + TypeScript)",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

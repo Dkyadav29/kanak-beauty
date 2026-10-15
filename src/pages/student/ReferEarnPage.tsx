@@ -26,10 +26,10 @@ const ReferEarnPage = () => {
     }
   };
 
-  const shareText = `Join me at Kanak Beauty Academy! Use my referral code ${s.referralCode} and get ${formatCurrency(s.program.refereeDiscountAmount, cur)} off your first course: ${s.referralLink}`;
+  const shareText = `Join me at Kanak Beauty Service! Use my referral code ${s.referralCode} and get ${formatCurrency(s.program.refereeDiscountAmount, cur)} off your first course: ${s.referralLink}`;
   const share = async () => {
     try {
-      if (navigator.share) await navigator.share({ title: 'Kanak Beauty Academy', text: shareText, url: s.referralLink });
+      if (navigator.share) await navigator.share({ title: 'Kanak Beauty Service', text: shareText, url: s.referralLink });
       else await copy(shareText, 'link');
     } catch {
       /* cancelled */
@@ -62,7 +62,7 @@ const ReferEarnPage = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Refer & Earn" description="Invite friends to Kanak Beauty Academy. They save on their first course, and you earn wallet credit when they enroll." />
+      <PageHeader title="Refer & Earn" description="Invite friends to Kanak Beauty Service. They save on their first course, and you earn wallet credit when they enroll." />
 
       {!s.program.enabled ? <InlineAlert tone="warning">The referral programme is currently paused. Existing credit can still be used at checkout.</InlineAlert> : null}
 

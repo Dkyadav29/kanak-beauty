@@ -165,7 +165,7 @@ class CourseUpsertSerializer(serializers.Serializer):
     short_description = serializers.CharField(min_length=10, max_length=240)
     description = serializers.CharField(min_length=20)
     thumbnail_url = serializers.CharField(required=False, allow_blank=True, allow_null=True, default="")
-    trainer_id = serializers.CharField(max_length=40)
+    trainer_id = serializers.CharField(max_length=40, required=False, allow_blank=True, allow_null=True, default=None)
     duration_weeks = serializers.IntegerField(min_value=1, max_value=520)
     total_hours = serializers.IntegerField(min_value=1, max_value=10000)
     level = serializers.ChoiceField(choices=Course.LEVEL_CHOICES)
@@ -191,6 +191,9 @@ class CourseUpsertSerializer(serializers.Serializer):
         return (value or "").strip()
 
     def validate_trainer_id(self, value):
+        value = (value or "").strip()
+        if not value:
+            return None  # trainer is optional; assign later
         if not Trainer.objects.filter(pk=value).exists():
             raise serializers.ValidationError("Select a trainer")
         return value

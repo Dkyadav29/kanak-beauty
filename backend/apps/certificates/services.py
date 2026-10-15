@@ -25,7 +25,7 @@ from common.exceptions import ConflictError
 
 from .models import Certificate, CertificateVerificationLog
 
-DEFAULT_ISSUER = "Kanak Beauty Academy"
+DEFAULT_ISSUER = "Kanak Beauty Service"
 # The demo/mock numbering starts after a reserved block so seeded numbers never collide.
 SEQUENCE_OFFSET = 200
 

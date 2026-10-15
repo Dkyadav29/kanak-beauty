@@ -41,7 +41,7 @@ export const FaqPage = () => (
 );
 
 export const TermsPage = () => (
-  <PolicyLayout eyebrow="Legal" title="Terms and Conditions" intro="These terms govern your use of the Kanak Beauty Academy website and learning platform.">
+  <PolicyLayout eyebrow="Legal" title="Terms and Conditions" intro="These terms govern your use of the Kanak Beauty Service website and learning platform.">
     <Section title="1. Accounts">
       <p>You must provide accurate information when registering and keep your login credentials confidential. You are responsible for activity under your account.</p>
     </Section>

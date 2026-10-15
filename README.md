@@ -1,4 +1,4 @@
-# Kanak Beauty Academy
+# Kanak Beauty Service
 
 A premium, responsive React application for a professional beauty training institute: public course catalogue, authentication, a student LMS (courses, live classes, recordings, progress, payments, certificates) and an academy administration console (students, courses, batches, batch history, enrollments, payments, certificates, audit logs) with strict role-based access control.
 

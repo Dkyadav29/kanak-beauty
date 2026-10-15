@@ -29,11 +29,16 @@ api_v1 = [
     path("", include("apps.referrals.urls")),
     path("", include("apps.reports.urls")),
     path("", include("apps.core.urls")),
-    # OpenAPI
-    path("schema", SpectacularAPIView.as_view(), name="schema"),
-    path("docs", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 ]
+
+# OpenAPI schema and interactive docs list every endpoint, so they are served
+# only in development (DEBUG) and never on a public deployment.
+if settings.DEBUG:
+    api_v1 += [
+        path("schema", SpectacularAPIView.as_view(), name="schema"),
+        path("docs", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+        path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    ]
 
 urlpatterns = [
     path("api/v1/", include(api_v1)),

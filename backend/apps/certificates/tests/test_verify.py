@@ -16,7 +16,7 @@ def test_verify_valid_certificate_is_public(api, certificate):
     assert body["certificate"]["certificateNumber"] == certificate.certificate_number
     assert body["certificate"]["studentName"] == "Priya Sharma"
     assert body["certificate"]["courseTitle"] == certificate.course_title
-    assert body["certificate"]["issuedBy"] == "Kanak Beauty Academy"
+    assert body["certificate"]["issuedBy"] == "Kanak Beauty Service"
     assert set(body["certificate"]) == {
         "certificateNumber",
         "studentName",

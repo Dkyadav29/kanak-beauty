@@ -1,4 +1,4 @@
-# Kanak Beauty Academy — Backend API Contracts
+# Kanak Beauty Service — Backend API Contracts
 
 This document defines the HTTP API the React frontend integrates with. The Django backend in `backend/` implements it; the frontend points at it through `VITE_API_BASE_URL`.
 

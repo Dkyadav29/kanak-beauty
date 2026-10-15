@@ -5,6 +5,7 @@ import { useAcademyStats, useCourses, useUpcomingSessions } from '@/hooks/useCat
 import { useAuth } from '@/features/auth/AuthContext';
 import { IMAGES } from '@/config/images';
 import { CourseCard } from '@/components/shared/CourseCard';
+import { HeroSlider } from '@/components/shared/HeroSlider';
 import { LiveClassCard } from '@/components/shared/LiveClassCard';
 import { DemoBadge, EmptyState, ErrorState, ImageWithFallback, LinkButton, LoadingSkeleton, SectionHeading } from '@/components/ui';
 
@@ -31,62 +32,35 @@ const HomePage = () => {
 
   return (
     <>
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -right-32 -top-32 h-[520px] w-[520px] rounded-full bg-rose-100/70 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-40 -left-24 h-[420px] w-[420px] rounded-full bg-gold-100/80 blur-3xl" />
-        <div className="container-x relative grid items-center gap-12 py-16 lg:grid-cols-[1.05fr_1fr] lg:py-24">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <p className="eyebrow">Professional beauty education</p>
-            <h1 className="mt-4 font-display text-5xl font-semibold leading-[1.05] text-charcoal-900 sm:text-6xl lg:text-7xl">
-              Turn Your Passion for Beauty into a <span className="text-rose-600">Professional Career.</span>
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-charcoal-500">
-              Learn professional makeup, skincare, hairstyling, bridal artistry, and salon techniques through expert-led training designed to build your skills and confidence.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <LinkButton to="/courses" size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
-                Explore Courses
-              </LinkButton>
-              <LinkButton to={isAuthenticated ? '/student/dashboard' : '/register'} size="lg" variant="outline">
-                {isAuthenticated ? 'Go to my dashboard' : 'Join Kanak Academy'}
-              </LinkButton>
-            </div>
+      {/* Hero: full-width image carousel banner (no copy, image only) */}
+      <section className="relative">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
+          <HeroSlider
+            slides={IMAGES.heroSlides}
+            intervalMs={1000}
+            className="aspect-[4/3] rounded-none shadow-none sm:aspect-[16/9] lg:aspect-[21/9] lg:max-h-[80vh]"
+          />
+        </motion.div>
 
-            {/* Trust stats */}
-            <div className="mt-10 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
-              {stats.isLoading ? (
-                Array.from({ length: 4 }).map((_, i) => <div key={i} className="card h-20 animate-pulse" />)
-              ) : stats.data ? (
-                [
-                  { label: 'Courses offered', value: stats.data.coursesOffered, icon: GraduationCap },
-                  { label: 'Enrolled students', value: stats.data.enrolledStudents, icon: Users },
-                  { label: 'Expert trainers', value: stats.data.expertTrainers, icon: Sparkles },
-                  { label: 'Certificates issued', value: stats.data.certificatesIssued, icon: Award },
-                ].map((s) => (
-                  <div key={s.label} className="card relative px-4 py-3.5">
-                    <s.icon className="h-4 w-4 text-rose-600" />
-                    <p className="mt-1.5 font-display text-2xl font-semibold text-charcoal-900">{s.value}</p>
-                    <p className="text-xs text-charcoal-500">{s.label}</p>
-                    {stats.data?.isDemoData ? <DemoBadge className="absolute right-2 top-2" /> : null}
-                  </div>
-                ))
-              ) : null}
-            </div>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.1 }} className="relative">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] shadow-lift sm:aspect-[5/6]">
-              <ImageWithFallback src={IMAGES.hero} alt="A professional makeup artist applying makeup to a client during a training session" className="h-full w-full object-cover" fallbackLabel="Kanak Academy" />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal-900/70 to-transparent p-6 text-white">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-300">Studio practice</p>
-                <p className="mt-1 font-display text-2xl font-semibold">Learn on real models, with real feedback.</p>
+        {/* Trust stats strip under the banner */}
+        <div className="container-x mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {stats.isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => <div key={i} className="card h-20 animate-pulse" />)
+          ) : stats.data ? (
+            [
+              { label: 'Courses offered', value: stats.data.coursesOffered, icon: GraduationCap },
+              { label: 'Enrolled students', value: stats.data.enrolledStudents, icon: Users },
+              { label: 'Expert trainers', value: stats.data.expertTrainers, icon: Sparkles },
+              { label: 'Certificates issued', value: stats.data.certificatesIssued, icon: Award },
+            ].map((s) => (
+              <div key={s.label} className="card relative px-4 py-3.5">
+                <s.icon className="h-4 w-4 text-rose-600" />
+                <p className="mt-1.5 font-display text-2xl font-semibold text-charcoal-900">{s.value}</p>
+                <p className="text-xs text-charcoal-500">{s.label}</p>
+                {stats.data?.isDemoData ? <DemoBadge className="absolute right-2 top-2" /> : null}
               </div>
-            </div>
-            <div className="absolute -bottom-6 -left-4 hidden w-56 overflow-hidden rounded-2xl border-4 border-ivory-100 shadow-lift sm:block">
-              <ImageWithFallback src={IMAGES.heroSecondary} alt="Makeup brushes and palette laid out for a class" className="aspect-[4/3] w-full object-cover" fallbackLabel="Kit" />
-            </div>
-          </motion.div>
+            ))
+          ) : null}
         </div>
       </section>
 

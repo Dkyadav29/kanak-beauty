@@ -28,7 +28,7 @@ class Certificate(PrefixedIDModel):
     )
     completion_date = models.DateTimeField()
     issued_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    issued_by = models.CharField(max_length=120, default="Kanak Beauty Academy")
+    issued_by = models.CharField(max_length=120, default="Kanak Beauty Service")
     issued_by_user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )

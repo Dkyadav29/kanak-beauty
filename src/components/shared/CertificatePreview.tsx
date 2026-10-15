@@ -42,7 +42,7 @@ export const CertificatePreview = ({ certificate, className, printable }: { cert
             </span>
             <span className="text-left leading-none">
               <span className="block font-display text-[clamp(0.9rem,3.2cqw,1.6rem)] font-bold">Kanak</span>
-              <span className="block text-[clamp(0.4rem,1.3cqw,0.65rem)] font-semibold uppercase tracking-[0.22em] text-gold-700">Beauty Academy</span>
+              <span className="block text-[clamp(0.4rem,1.3cqw,0.65rem)] font-semibold uppercase tracking-[0.22em] text-gold-700">Beauty Service</span>
             </span>
           </div>
           <p className="mt-[3cqw] text-[clamp(0.5rem,1.6cqw,0.8rem)] font-semibold uppercase tracking-[0.3em] text-gold-700">Certificate of Completion</p>

@@ -881,7 +881,7 @@ class Command(BaseCommand):
                 course_title=course.title,
                 batch=batches[batch_id] if batch_id else None,
                 completion_date=completion,
-                issued_by="Kanak Beauty Academy",
+                issued_by="Kanak Beauty Service",
                 issued_by_user=None,
                 status="revoked" if revoked else "issued",
                 revoked_at=at(-max(1, days_ago - 10), 12) if revoked else None,

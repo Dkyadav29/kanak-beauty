@@ -109,7 +109,7 @@ def issue_otp(user: User) -> None:
         expires_at=now + timedelta(minutes=settings.OTP_TTL_MINUTES),
     )
     _send(
-        "Your Kanak Beauty Academy verification code",
+        "Your Kanak Beauty Service verification code",
         (
             f"Hi {user.name},\n\n"
             f"Your verification code is {code}. It expires in {settings.OTP_TTL_MINUTES} minutes.\n\n"
@@ -260,7 +260,7 @@ def forgot_password(email: str) -> str | None:
     )
     link = f"{settings.PUBLIC_SITE_URL.rstrip('/')}/reset-password?token={raw}"
     _send(
-        "Reset your Kanak Beauty Academy password",
+        "Reset your Kanak Beauty Service password",
         (
             f"Hi {user.name},\n\n"
             "Use the link below to choose a new password. "

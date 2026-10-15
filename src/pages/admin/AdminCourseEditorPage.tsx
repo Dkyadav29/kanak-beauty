@@ -21,7 +21,7 @@ const base = z.object({
   shortDescription: z.string().trim().min(10, 'At least 10 characters').max(200, 'At most 200 characters'),
   description: z.string().trim().min(20, 'At least 20 characters').max(4000, 'At most 4000 characters'),
   thumbnailUrl: z.string().trim().url('Enter a valid image URL').or(z.literal('')),
-  trainerId: z.string().min(1, 'Select a trainer'),
+  trainerId: z.string(),
   durationWeeks: numberField('Enter the duration in weeks').int('Whole weeks only').min(1, 'At least 1 week'),
   totalHours: numberField('Enter the total hours').min(1, 'At least 1 hour'),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
@@ -72,7 +72,7 @@ const toForm = (c: Course): FormValues => ({
   shortDescription: c.shortDescription,
   description: c.description,
   thumbnailUrl: c.thumbnailUrl,
-  trainerId: c.trainer.id,
+  trainerId: c.trainer?.id ?? '',
   durationWeeks: c.durationWeeks,
   totalHours: c.totalHours,
   level: c.level,
@@ -98,7 +98,7 @@ const toPayload = (v: FormValues): CourseUpsertRequest => ({
   shortDescription: v.shortDescription,
   description: v.description,
   thumbnailUrl: v.thumbnailUrl,
-  trainerId: v.trainerId,
+  trainerId: v.trainerId || null,
   durationWeeks: v.durationWeeks,
   totalHours: v.totalHours,
   level: v.level,
@@ -203,9 +203,9 @@ const CourseDetailsForm = ({ course }: { course?: Course }) => {
           <section>
             <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-charcoal-500">Delivery & pricing</h4>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              <FormField label="Trainer" htmlFor="trainerId" error={errors.trainerId?.message} required className="sm:col-span-2">
+              <FormField label="Trainer" htmlFor="trainerId" error={errors.trainerId?.message} hint="Optional. You can assign a trainer later." className="sm:col-span-2">
                 <Select id="trainerId" invalid={!!errors.trainerId} {...register('trainerId')}>
-                  <option value="">Select a trainer</option>
+                  <option value="">No trainer yet</option>
                   {trainers.data?.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name} — {t.title}

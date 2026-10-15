@@ -154,7 +154,8 @@ def test_admin_create_rejects_missing_required_fields(admin_client, trainer):
     res = admin_client.post(ADMIN, {"title": "x"}, format="json")
     assert res.status_code == 400
     details = res.json()["details"]
-    assert {"shortDescription", "description", "trainerId", "price", "level", "format"} <= set(details)
+    assert {"shortDescription", "description", "price", "level", "format"} <= set(details)
+    assert "trainerId" not in details  # trainer is optional
 
 
 def test_admin_create_published_without_lessons_is_blocked(admin_client, trainer):
@@ -323,3 +324,20 @@ def test_enrolled_students_lists_active_access_only(admin_client, course, enroll
         {"studentId": student.id, "name": "Priya Sharma", "email": "priya@student.test", "batchId": batch.id},
     ]
     assert admin_client.get(f"{ADMIN}/crs_missing/enrolled-students").status_code == 404
+
+
+def test_admin_create_course_without_trainer(admin_client, trainer):
+    """Trainer is optional: blank/null trainerId creates the course with trainer=None."""
+    for blank in ("", None):
+        res = admin_client.post(ADMIN, course_payload(trainer, title=f"No trainer {blank!r}", trainerId=blank), format="json")
+        assert res.status_code == 201, res.json()
+        assert res.json()["trainer"] is None
+    # Omitting the key entirely also works.
+    payload = course_payload(trainer, title="No trainer key")
+    payload.pop("trainerId")
+    res = admin_client.post(ADMIN, payload, format="json")
+    assert res.status_code == 201, res.json()
+    assert res.json()["trainer"] is None
+    # An unknown trainer id is still rejected.
+    res = admin_client.post(ADMIN, course_payload(trainer, title="Bad trainer", trainerId="trn_missing"), format="json")
+    assert res.status_code == 400

@@ -93,7 +93,7 @@ def enrolled_course_view(enrollment, summary, next_session_at, certificate) -> d
         "course_id": course.id,
         "title": course.title,
         "thumbnail_url": course.thumbnail_url,
-        "trainer_name": course.trainer.name,
+        "trainer_name": course.trainer.name if course.trainer else "",
         "format": course.format,
         "progress_percent": summary.progress_percent,
         "completed_lessons": summary.completed_lessons,

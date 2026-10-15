@@ -39,7 +39,7 @@ export const PublicFooter = () => (
       <div className="lg:col-span-2">
         <Logo />
         <p className="mt-4 max-w-sm text-sm leading-relaxed text-charcoal-500">
-          Kanak Beauty Academy trains aspiring makeup artists, hairstylists, skincare specialists and salon professionals through expert-led, practical education.
+          Kanak Beauty Service trains aspiring makeup artists, hairstylists, skincare specialists and salon professionals through expert-led, practical education.
         </p>
         <ul className="mt-6 space-y-2.5 text-sm text-charcoal-700">
           <li className="flex items-center gap-2.5">
@@ -81,7 +81,7 @@ export const PublicFooter = () => (
     </div>
     <div className="border-t border-ivory-200">
       <div className="container-x flex flex-col items-center justify-between gap-2 py-5 text-xs text-charcoal-500 sm:flex-row">
-        <p>© {new Date().getFullYear()} Kanak Beauty Academy. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} Kanak Beauty Service. All rights reserved.</p>
         <p>Contact details, imagery and testimonials shown during development are placeholders.</p>
       </div>
     </div>

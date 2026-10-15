@@ -65,7 +65,7 @@ export const ImageWithFallback = ({ className, alt, fallbackLabel, ...props }: I
 };
 
 export const Logo = ({ className, dark, to = '/', compact }: { className?: string; dark?: boolean; to?: string; compact?: boolean }) => (
-  <Link to={to} className={cn('inline-flex items-center gap-2.5', className)} aria-label="Kanak Beauty Academy home">
+  <Link to={to} className={cn('inline-flex items-center gap-2.5', className)} aria-label="Kanak Beauty Service home">
     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-600 text-white shadow-sm shadow-rose-600/30">
       <svg viewBox="0 0 64 64" className="h-5 w-5" aria-hidden>
         <path d="M20 16v32M20 32l20-16M20 32l20 16" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none" />
@@ -74,7 +74,7 @@ export const Logo = ({ className, dark, to = '/', compact }: { className?: strin
     {!compact ? (
       <span className="leading-none">
         <span className={cn('block font-display text-xl font-bold tracking-tight', dark ? 'text-white' : 'text-charcoal-900')}>Kanak</span>
-        <span className={cn('block text-[10px] font-semibold uppercase tracking-[0.22em]', dark ? 'text-gold-300' : 'text-gold-700')}>Beauty Academy</span>
+        <span className={cn('block text-[10px] font-semibold uppercase tracking-[0.22em]', dark ? 'text-gold-300' : 'text-gold-700')}>Beauty Service</span>
       </span>
     ) : null}
   </Link>

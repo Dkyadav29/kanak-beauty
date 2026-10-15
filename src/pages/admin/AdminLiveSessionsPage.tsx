@@ -69,7 +69,7 @@ const ScheduleDialog = ({ open, onClose, initialCourseId }: { open: boolean; onC
   // Pre-fill the trainer from the chosen course when none is selected yet.
   useEffect(() => {
     const course = courses.data?.find((c) => c.id === courseId);
-    if (course) setValue('trainerId', course.trainer.id, { shouldDirty: true });
+    if (course?.trainer) setValue('trainerId', course.trainer.id, { shouldDirty: true });
     setValue('batchId', '');
   }, [courseId, courses.data, setValue]);
 

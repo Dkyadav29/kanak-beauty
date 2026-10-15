@@ -43,9 +43,11 @@ export const CourseCard = ({ course, index = 0 }: { course: CourseSummary; index
       </h3>
       <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-charcoal-500">{course.shortDescription}</p>
       <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-charcoal-700">
-        <li className="flex items-center gap-1.5">
-          <UserRound className="h-3.5 w-3.5 text-rose-600" /> {course.trainer.name}
-        </li>
+        {course.trainer ? (
+          <li className="flex items-center gap-1.5">
+            <UserRound className="h-3.5 w-3.5 text-rose-600" /> {course.trainer.name}
+          </li>
+        ) : null}
         <li className="flex items-center gap-1.5">
           <Clock className="h-3.5 w-3.5 text-rose-600" /> {course.durationWeeks} weeks · {course.totalHours}h
         </li>

@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
                 ('course_title', models.CharField(max_length=160)),
                 ('completion_date', models.DateTimeField()),
                 ('issued_at', models.DateTimeField(auto_now_add=True, db_index=True)),
-                ('issued_by', models.CharField(default='Kanak Beauty Academy', max_length=120)),
+                ('issued_by', models.CharField(default='Kanak Beauty Service', max_length=120)),
                 ('status', models.CharField(choices=[('issued', 'Issued'), ('revoked', 'Revoked')], db_index=True, default='issued', max_length=16)),
                 ('revoked_at', models.DateTimeField(blank=True, null=True)),
                 ('revoked_reason', models.CharField(blank=True, default='', max_length=240)),

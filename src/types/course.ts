@@ -56,7 +56,8 @@ export interface Course {
   shortDescription: string;
   description: string;
   thumbnailUrl: string;
-  trainer: Trainer;
+  /** Null until an admin assigns a trainer. */
+  trainer: Trainer | null;
   durationWeeks: number;
   totalHours: number;
   level: CourseLevel;
@@ -88,7 +89,8 @@ export interface CourseUpsertRequest {
   shortDescription: string;
   description: string;
   thumbnailUrl: string;
-  trainerId: string;
+  /** Optional; null or empty leaves the course without a trainer. */
+  trainerId: string | null;
   durationWeeks: number;
   totalHours: number;
   level: CourseLevel;

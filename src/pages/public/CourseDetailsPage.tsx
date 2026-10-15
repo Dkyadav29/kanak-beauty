@@ -87,14 +87,16 @@ const CourseDetailsPage = () => {
                 <CalendarDays className="h-4 w-4 text-rose-600" /> {c.scheduleSummary}
               </li>
             </ul>
-            <div className="mt-8 flex items-center gap-4 rounded-2xl border border-ivory-300 bg-ivory-100 p-4">
-              <Avatar name={c.trainer.name} src={c.trainer.avatarUrl} size="lg" />
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">Your trainer</p>
-                <p className="font-display text-xl font-semibold text-charcoal-900">{c.trainer.name}</p>
-                <p className="text-sm text-charcoal-500">{c.trainer.title}</p>
+            {c.trainer ? (
+              <div className="mt-8 flex items-center gap-4 rounded-2xl border border-ivory-300 bg-ivory-100 p-4">
+                <Avatar name={c.trainer.name} src={c.trainer.avatarUrl} size="lg" />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">Your trainer</p>
+                  <p className="font-display text-xl font-semibold text-charcoal-900">{c.trainer.name}</p>
+                  <p className="text-sm text-charcoal-500">{c.trainer.title}</p>
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
 
           <aside className="card self-start overflow-hidden lg:sticky lg:top-24">
@@ -215,26 +217,28 @@ const CourseDetailsPage = () => {
         </div>
 
         <aside className="space-y-8">
-          <div>
-            <h2 className="font-display text-2xl font-semibold text-charcoal-900">Meet your trainer</h2>
-            <div className="card mt-4 p-6">
-              <div className="flex items-center gap-4">
-                <Avatar name={c.trainer.name} src={c.trainer.avatarUrl} size="xl" />
-                <div>
-                  <p className="font-display text-xl font-semibold">{c.trainer.name}</p>
-                  <p className="text-sm text-charcoal-500">{c.trainer.title}</p>
+          {c.trainer ? (
+            <div>
+              <h2 className="font-display text-2xl font-semibold text-charcoal-900">Meet your trainer</h2>
+              <div className="card mt-4 p-6">
+                <div className="flex items-center gap-4">
+                  <Avatar name={c.trainer.name} src={c.trainer.avatarUrl} size="xl" />
+                  <div>
+                    <p className="font-display text-xl font-semibold">{c.trainer.name}</p>
+                    <p className="text-sm text-charcoal-500">{c.trainer.title}</p>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm leading-relaxed text-charcoal-700">{c.trainer.bio}</p>
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {c.trainer.specialities.map((s) => (
+                    <Badge key={s} tone="rose">
+                      {s}
+                    </Badge>
+                  ))}
                 </div>
               </div>
-              <p className="mt-4 text-sm leading-relaxed text-charcoal-700">{c.trainer.bio}</p>
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {c.trainer.specialities.map((s) => (
-                  <Badge key={s} tone="rose">
-                    {s}
-                  </Badge>
-                ))}
-              </div>
             </div>
-          </div>
+          ) : null}
           <div>
             <h2 className="font-display text-2xl font-semibold text-charcoal-900">Upcoming schedule</h2>
             <div className="mt-4 space-y-3">

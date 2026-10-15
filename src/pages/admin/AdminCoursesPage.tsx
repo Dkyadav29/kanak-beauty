@@ -92,7 +92,7 @@ const AdminCoursesPage = () => {
                 </div>
                 <div className="flex flex-1 flex-col p-5">
                   <h3 className="font-display text-lg font-semibold leading-snug text-charcoal-900">{c.title}</h3>
-                  <p className="mt-1 text-sm text-charcoal-500">with {c.trainer.name}</p>
+                  <p className="mt-1 text-sm text-charcoal-500">{c.trainer ? `with ${c.trainer.name}` : 'No trainer assigned'}</p>
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     <StatusBadge status={c.level} />
                     <StatusBadge status={c.format} />

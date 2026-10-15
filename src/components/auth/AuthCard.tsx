@@ -9,7 +9,7 @@ export const AuthCard = ({ title, description, children, footer, aside }: { titl
         <ImageWithFallback src={IMAGES.heroSecondary} alt="" className="absolute inset-0 h-full w-full object-cover" fallbackLabel="Kanak" />
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/80 via-charcoal-900/20 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-10 text-white">
-          <p className="eyebrow text-gold-300!">Kanak Beauty Academy</p>
+          <p className="eyebrow text-gold-300!">Kanak Beauty Service</p>
           <p className="mt-2 font-display text-3xl font-semibold leading-tight">Train with experts. Build a career you love.</p>
           {aside ? <div className="mt-4 text-sm text-white/80">{aside}</div> : null}
         </div>

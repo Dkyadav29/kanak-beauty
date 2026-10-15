@@ -37,7 +37,8 @@ class Course(PrefixedIDModel):
     short_description = models.CharField(max_length=240)
     description = models.TextField()
     thumbnail_url = models.TextField(blank=True, default="")
-    trainer = models.ForeignKey(Trainer, on_delete=models.PROTECT, related_name="courses")
+    # Optional: a course can be created before a trainer is assigned.
+    trainer = models.ForeignKey(Trainer, on_delete=models.SET_NULL, null=True, blank=True, related_name="courses")
     duration_weeks = models.PositiveSmallIntegerField()
     total_hours = models.PositiveSmallIntegerField()
     level = models.CharField(max_length=16, choices=LEVEL_CHOICES, db_index=True)

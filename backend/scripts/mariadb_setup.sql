@@ -1,4 +1,4 @@
--- Kanak Beauty Academy: MariaDB database and least-privilege application user.
+-- Kanak Beauty Service: MariaDB database and least-privilege application user.
 -- Run as an administrative user, e.g.:
 --   mysql -u root -p < scripts/mariadb_setup.sql
 -- Replace the password placeholder before running and mirror it in backend/.env (DB_PASSWORD).

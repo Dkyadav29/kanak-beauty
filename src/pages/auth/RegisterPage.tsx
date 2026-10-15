@@ -64,7 +64,7 @@ const RegisterPage = () => {
   return (
     <AuthCard
       title="Create your account"
-      description="Join Kanak Beauty Academy to enroll in courses and track your learning."
+      description="Join Kanak Beauty Service to enroll in courses and track your learning."
       footer={
         <>
           Already have an account?{' '}

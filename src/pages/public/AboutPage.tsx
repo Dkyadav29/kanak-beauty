@@ -15,7 +15,7 @@ const AboutPage = () => {
     <>
       <section className="container-x grid items-center gap-12 py-12 lg:grid-cols-2 lg:py-20">
         <div>
-          <SectionHeading eyebrow="About the academy" title="Where artistry meets professional discipline" description="Kanak Beauty Academy was founded to give aspiring beauty professionals a structured, expert-led path from passion to profession. Our programmes combine studio practice, flexible recorded learning and career guidance." />
+          <SectionHeading eyebrow="About the academy" title="Where artistry meets professional discipline" description="Kanak Beauty Service was founded to give aspiring beauty professionals a structured, expert-led path from passion to profession. Our programmes combine studio practice, flexible recorded learning and career guidance." />
           <div className="mt-8 flex flex-wrap gap-3">
             <LinkButton to="/courses">Explore courses</LinkButton>
             <LinkButton to="/contact" variant="outline">
@@ -24,7 +24,7 @@ const AboutPage = () => {
           </div>
         </div>
         <div className="relative">
-          <ImageWithFallback src={IMAGES.about} alt="Inside the Kanak Beauty Academy training studio" className="aspect-[4/3] w-full rounded-[2rem] object-cover shadow-lift" fallbackLabel="Studio" />
+          <ImageWithFallback src={IMAGES.about} alt="Inside the Kanak Beauty Service training studio" className="aspect-[4/3] w-full rounded-[2rem] object-cover shadow-lift" fallbackLabel="Studio" />
         </div>
       </section>
 
