@@ -219,7 +219,7 @@ const AdminBatchDetailPage = () => {
             className="lg:grid-cols-4"
             items={[
               { label: 'Course', value: <Link to={`/admin/courses/${b.courseId}`} className="font-medium text-rose-700 hover:underline">{b.courseTitle}</Link> },
-              { label: 'Trainer', value: b.trainerName },
+              { label: 'Trainer', value: b.trainerName ?? 'Not assigned' },
               { label: 'Dates', value: `${formatDate(b.startDate)} – ${formatDate(b.endDate)}` },
               {
                 label: 'Capacity',

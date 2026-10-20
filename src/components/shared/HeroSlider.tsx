@@ -4,12 +4,28 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ImageWithFallback } from '@/components/ui';
 
+export type HeroSlideFocus = 'center' | 'top' | 'bottom' | 'left' | 'right' | 'left-top' | 'right-top' | 'left-bottom' | 'right-bottom';
+
 export interface HeroSlide {
   src: string;
   alt: string;
   eyebrow: string;
   caption: string;
+  /** Which part of the photo stays visible when it is cropped to the frame. Defaults to center. */
+  focus?: HeroSlideFocus;
 }
+
+const FOCUS_CLASS: Record<HeroSlideFocus, string> = {
+  center: 'object-center',
+  top: 'object-top',
+  bottom: 'object-bottom',
+  left: 'object-left',
+  right: 'object-right',
+  'left-top': 'object-left-top',
+  'right-top': 'object-right-top',
+  'left-bottom': 'object-left-bottom',
+  'right-bottom': 'object-right-bottom',
+};
 
 interface HeroSliderProps {
   slides: HeroSlide[];
@@ -86,13 +102,15 @@ export const HeroSlider = ({ slides, intervalMs = 5000, className }: HeroSliderP
             <ImageWithFallback
               src={slide.src}
               alt={slide.alt}
-              className="pointer-events-none h-full w-full object-cover"
+              className={cn('pointer-events-none h-full w-full object-cover', FOCUS_CLASS[slide.focus ?? 'center'])}
               fallbackLabel="Kanak Academy"
               loading={Math.abs(i - index) <= 1 ? 'eager' : 'lazy'}
             />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal-900/85 via-charcoal-900/35 to-transparent p-6 pb-16 text-white">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-300">{slide.eyebrow}</p>
-              <p className="mt-1 font-display text-2xl font-semibold">{slide.caption}</p>
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal-900/85 via-charcoal-900/35 to-transparent pb-16 pt-24 text-white sm:pb-20">
+              <div className="container-x">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-300">{slide.eyebrow}</p>
+                <p className="mt-1 max-w-2xl font-display text-2xl font-semibold sm:text-3xl lg:text-4xl">{slide.caption}</p>
+              </div>
             </div>
           </div>
         ))}

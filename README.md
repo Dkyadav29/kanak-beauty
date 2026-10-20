@@ -14,10 +14,10 @@ cp .env.example .env      # points at the Django backend on http://localhost:800
 npm run dev               # http://localhost:5173
 ```
 
-The app talks to the backend in `backend/` (Django REST Framework + MariaDB). Start it first:
+The app talks to the backend in `kanak-beauty-backend/` (Django REST Framework + MariaDB, its own git repo). Start it first:
 
 ```bash
-cd backend
+cd kanak-beauty-backend
 .venv\Scripts\activate            # Windows
 python manage.py migrate
 python manage.py create_admin --email admin@example.com --name "Kanak Admin" --password '...'
@@ -75,7 +75,7 @@ src/
   lib/             permissions table + helpers, formatting utilities
   pages/           public/, auth/, student/, admin/ route components (lazy-loaded)
   types/           domain models and API request/response types
-backend/                Django REST Framework backend (see backend/README.md)
+kanak-beauty-backend/   Django REST Framework backend, separate repo (see kanak-beauty-backend/README.md)
 docs/API_CONTRACTS.md   HTTP contract shared by the frontend and backend
 tests/                  Vitest suites (API client behaviour)
 ```
@@ -112,7 +112,7 @@ See `docs/API_CONTRACTS.md` for the backend-side rules (signature verification, 
 
 - `tests/apiClient.test.ts` — the Axios client: bearer header, silent refresh on 401 with the request replayed, a single shared refresh for concurrent 401s, sign-out when the refresh is rejected, and login failures treated as credential errors rather than session expiry.
 
-The business rules (RBAC, ownership, payments and entitlement, progress, certificates, batch history, audit) are tested in the backend suite: `cd backend && python -m pytest -q`.
+The business rules (RBAC, ownership, payments and entitlement, progress, certificates, batch history, audit) are tested in the backend suite: `cd kanak-beauty-backend && python -m pytest -q`.
 
 Responsive behaviour is implemented with mobile-first Tailwind layouts (collapsible navbars, drawer sidebar, horizontally scrolling tables with `hideBelow` columns). Verify visually at phone, tablet and desktop widths in the browser dev tools.
 

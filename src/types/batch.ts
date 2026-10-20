@@ -8,7 +8,8 @@ export interface Batch {
   code: string;
   name: string;
   courseId: string;
-  trainerId: string;
+  /** Null until a trainer is assigned. */
+  trainerId: string | null;
   startDate: ISODateString;
   endDate: ISODateString;
   capacity: number;
@@ -30,7 +31,7 @@ export interface BatchEnrollment {
 
 export interface BatchSummary extends Batch {
   courseTitle: string;
-  trainerName: string;
+  trainerName: string | null;
   totalStudents: number;
   completedStudents: number;
   inProgressStudents: number;
@@ -81,7 +82,7 @@ export interface BatchDetail extends BatchSummary {
 export interface BatchUpsertRequest {
   name: string;
   courseId: string;
-  trainerId: string;
+  trainerId: string | null;
   startDate: string;
   endDate: string;
   capacity: number;

@@ -44,7 +44,7 @@ const AdminBatchHistoryPage = () => {
     { key: 'code', header: 'Batch ID', render: (b) => <span className="font-mono text-xs">{b.code}</span> },
     { key: 'name', header: 'Name', render: (b) => <span className="font-medium text-charcoal-900">{b.name}</span> },
     { key: 'course', header: 'Course', render: (b) => b.courseTitle, hideBelow: 'md' },
-    { key: 'trainer', header: 'Trainer', render: (b) => b.trainerName, hideBelow: 'lg' },
+    { key: 'trainer', header: 'Trainer', render: (b) => b.trainerName ?? 'Not assigned', hideBelow: 'lg' },
     { key: 'enrolled', header: 'Enrolled', render: (b) => b.totalStudents, align: 'center' },
     { key: 'completed', header: 'Completed', render: (b) => b.completedStudents, align: 'center', hideBelow: 'sm' },
     { key: 'inProgress', header: 'In progress', render: (b) => b.inProgressStudents, align: 'center', hideBelow: 'md' },

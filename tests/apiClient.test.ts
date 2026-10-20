@@ -8,6 +8,7 @@ import { AxiosError, AxiosHeaders, type AxiosAdapter, type InternalAxiosRequestC
 import { apiClient, onUnauthorized, resolveApiUrl, tokenRefreshClient } from '@/lib/api/client';
 import { tokenStorage } from '@/lib/api/tokenStorage';
 import { ApiError } from '@/lib/api/errors';
+import { env } from '@/config/env';
 
 type Handler = (config: InternalAxiosRequestConfig) => { status: number; data: unknown };
 
@@ -28,7 +29,8 @@ beforeEach(() => {
 
 describe('resolveApiUrl', () => {
   it('prefixes API-relative media paths with the API origin and leaves absolute URLs alone', () => {
-    expect(resolveApiUrl('/api/v1/media/recordings/abc')).toBe('http://localhost:8000/api/v1/media/recordings/abc');
+    const apiOrigin = new URL(env.apiBaseUrl).origin;
+    expect(resolveApiUrl('/api/v1/media/recordings/abc')).toBe(`${apiOrigin}/api/v1/media/recordings/abc`);
     expect(resolveApiUrl('https://cdn.example.com/v.mp4')).toBe('https://cdn.example.com/v.mp4');
     expect(resolveApiUrl('data:image/jpeg;base64,AAA')).toBe('data:image/jpeg;base64,AAA');
   });

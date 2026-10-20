@@ -3,45 +3,52 @@
  * as placeholders. Replace with approved academy photography before launch.
  * Every <ImageWithFallback> degrades gracefully if a URL is unavailable.
  */
+import type { HeroSlide } from '@/components/shared/HeroSlider';
+
 const u = (id: string, w = 1200) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
 
 export const IMAGES = {
   hero: u('photo-1516975080664-ed2fc6a32937', 1600),
   heroSecondary: u('photo-1487412947147-5cebf100ffc2', 900),
   about: u('photo-1522337660859-02fbefca4702', 1400),
-  /** Home page hero slider (pre-login landing). Five slides, shown in order. */
+  /** Home page hero slider (pre-login landing). Five slides, shown in order. "focus" sets which part of the photo stays visible when it is cropped. */
   heroSlides: [
     {
       src: u('photo-1516975080664-ed2fc6a32937', 1600),
       alt: 'A professional makeup artist applying makeup to a client during a training session',
       eyebrow: 'Studio practice',
       caption: 'Learn on real models, with real feedback.',
+      focus: 'center',
     },
     {
       src: u('photo-1515377905703-c4788e51af15', 1600),
       alt: 'A bride with finished bridal makeup and hairstyling',
       eyebrow: 'Bridal artistry',
       caption: 'Master the looks clients book months ahead.',
+      focus: 'top',
     },
     {
       src: u('photo-1562322140-8baeececf3df', 1600),
       alt: 'A hairstylist styling long hair in a salon',
       eyebrow: 'Hairstyling',
       caption: 'From blow-dry basics to editorial updos.',
+      focus: 'top',
     },
     {
       src: u('photo-1570172619644-dfd03ed5d881', 1600),
       alt: 'A skincare specialist performing a facial treatment',
       eyebrow: 'Skincare',
       caption: 'Understand skin before you treat it.',
+      focus: 'top',
     },
     {
       src: u('photo-1487412947147-5cebf100ffc2', 1600),
       alt: 'Makeup brushes and palette laid out for a class',
       eyebrow: 'Professional kit',
       caption: 'Build and care for a kit that lasts.',
+      focus: 'center',
     },
-  ],
+  ] satisfies HeroSlide[],
   courses: {
     makeup: u('photo-1512496015851-a90fb38ba796'),
     bridal: u('photo-1515377905703-c4788e51af15'),

@@ -11,7 +11,7 @@ const schema = z
   .object({
     name: z.string().min(3, 'At least 3 characters').max(120, 'At most 120 characters'),
     courseId: z.string().min(1, 'Select a course'),
-    trainerId: z.string().min(1, 'Select a trainer'),
+    trainerId: z.string(),
     startDate: z.string().min(1, 'Select a start date'),
     endDate: z.string().min(1, 'Select an end date'),
     capacity: z.number({ invalid_type_error: 'Enter a number' }).int('Enter a whole number').min(1, 'At least 1 seat'),
@@ -68,7 +68,7 @@ export const BatchFormDialog = ({
   const submit = async (values: FormValues) => {
     setServerError(null);
     try {
-      await onSubmit({ ...values, name: values.name.trim(), scheduleNote: values.scheduleNote.trim() });
+      await onSubmit({ ...values, name: values.name.trim(), trainerId: values.trainerId || null, scheduleNote: values.scheduleNote.trim() });
       onClose();
     } catch (e) {
       if (e instanceof ApiError && e.details) {
@@ -86,7 +86,7 @@ export const BatchFormDialog = ({
       open={open}
       onClose={onClose}
       title={title}
-      description="Batches group enrolled students under one trainer and schedule. The batch code is generated automatically."
+      description="Batches group enrolled students under a schedule, with an optional trainer. The batch code is generated automatically."
       size="lg"
       footer={
         <>
@@ -118,9 +118,9 @@ export const BatchFormDialog = ({
             ))}
           </Select>
         </FormField>
-        <FormField label="Trainer" htmlFor="batch-trainer" error={errors.trainerId?.message} required>
+        <FormField label="Trainer" htmlFor="batch-trainer" error={errors.trainerId?.message} hint="Optional. You can assign a trainer later.">
           <Select id="batch-trainer" invalid={!!errors.trainerId} {...register('trainerId')}>
-            <option value="">Select a trainer</option>
+            <option value="">No trainer yet</option>
             {trainers.data?.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}

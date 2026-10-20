@@ -1,6 +1,6 @@
 # Kanak Beauty Service — Backend API Contracts
 
-This document defines the HTTP API the React frontend integrates with. The Django backend in `backend/` implements it; the frontend points at it through `VITE_API_BASE_URL`.
+This document defines the HTTP API the React frontend integrates with. The Django backend in `kanak-beauty-backend/` implements it; the frontend points at it through `VITE_API_BASE_URL`.
 
 All request/response shapes are the TypeScript interfaces in `src/types/`. Dates are ISO-8601 strings. Money is an integer amount in the smallest display unit the academy uses (the UI formats INR without decimals) plus a `currency` code.
 

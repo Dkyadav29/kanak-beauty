@@ -49,7 +49,7 @@ const AdminBatchesPage = () => {
       ),
     },
     { key: 'course', header: 'Course', render: (b) => b.courseTitle, hideBelow: 'md' },
-    { key: 'trainer', header: 'Trainer', render: (b) => b.trainerName, hideBelow: 'lg' },
+    { key: 'trainer', header: 'Trainer', render: (b) => b.trainerName ?? 'Not assigned', hideBelow: 'lg' },
     {
       key: 'dates',
       header: 'Dates',

@@ -5,3 +5,5 @@ dist
 coverage
 .DS_Store
 backend
+# Separate git repo (github.com/Dkyadav29/kanak-beauty-backend)
+kanak-beauty-backend

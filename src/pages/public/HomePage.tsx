@@ -37,7 +37,7 @@ const HomePage = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
           <HeroSlider
             slides={IMAGES.heroSlides}
-            intervalMs={1000}
+            intervalMs={2000}
             className="aspect-[4/3] rounded-none shadow-none sm:aspect-[16/9] lg:aspect-[21/9] lg:max-h-[80vh]"
           />
         </motion.div>
