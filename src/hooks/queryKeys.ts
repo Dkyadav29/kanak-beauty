@@ -8,6 +8,7 @@ export const queryKeys = {
     upcoming: (limit: number) => ['catalog', 'upcoming', limit] as const,
     trainers: ['catalog', 'trainers'] as const,
     stats: ['catalog', 'stats'] as const,
+    heroSlides: ['catalog', 'hero-slides'] as const,
     verify: (number: string) => ['catalog', 'verify', number] as const,
     referralCode: (code: string) => ['catalog', 'referral-code', code] as const,
   },
@@ -48,5 +49,6 @@ export const queryKeys = {
     referrals: (filters: object = {}) => ['admin', 'referrals', filters] as const,
     referralStats: ['admin', 'referrals', 'stats'] as const,
     referralConfig: ['admin', 'referrals', 'config'] as const,
+    heroSlides: ['admin', 'hero-slides'] as const,
   },
 };

@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/api/client';
 import type {
   AdminAnalytics,
+  AdminHeroSlide,
   AdminOverviewStats,
   AuditLog,
   AuditLogFilters,
@@ -20,6 +21,7 @@ import type {
   EligibleStudent,
   EnrollmentAdminRow,
   EnrollmentFilters,
+  HeroSlideInput,
   LiveSession,
   LiveSessionUpsertRequest,
   PageQuery,
@@ -56,6 +58,20 @@ export interface EnrolledStudentOption {
   email: string;
   batchId: string | null;
 }
+
+/**
+ * Hero slide bodies go out as multipart when a file is attached (the backend reads
+ * camelCase form keys), otherwise as plain JSON.
+ */
+const heroSlideRequest = (input: HeroSlideInput) => {
+  if (!input.image) return { body: input as object, config: {} };
+  const form = new FormData();
+  Object.entries(input).forEach(([key, value]) => {
+    if (value === undefined) return;
+    form.append(key, value instanceof File ? value : String(value));
+  });
+  return { body: form, config: { headers: { 'Content-Type': 'multipart/form-data' } } };
+};
 
 export const adminService = {
   // overview
@@ -136,6 +152,21 @@ export const adminService = {
   referralConfig: async () => (await apiClient.get<ReferralProgramConfig>('/admin/referrals/config')).data,
   updateReferralConfig: async (payload: Omit<ReferralProgramConfig, 'currency'>) =>
     (await apiClient.put<ReferralProgramConfig>('/admin/referrals/config', payload)).data,
+
+  // home page hero slider
+  heroSlides: async () => (await apiClient.get<AdminHeroSlide[]>('/admin/hero-slides')).data,
+  createHeroSlide: async (input: HeroSlideInput) => {
+    const { body, config } = heroSlideRequest(input);
+    return (await apiClient.post<AdminHeroSlide>('/admin/hero-slides', body, config)).data;
+  },
+  updateHeroSlide: async (slideId: string, input: HeroSlideInput) => {
+    const { body, config } = heroSlideRequest(input);
+    return (await apiClient.patch<AdminHeroSlide>(`/admin/hero-slides/${slideId}`, body, config)).data;
+  },
+  deleteHeroSlide: async (slideId: string) => {
+    await apiClient.delete(`/admin/hero-slides/${slideId}`);
+  },
+  reorderHeroSlides: async (ids: string[]) => (await apiClient.put<AdminHeroSlide[]>('/admin/hero-slides/order', { ids })).data,
 
   // audit
   auditLogs: async (filters: AuditLogFilters & PageQuery = {}) =>

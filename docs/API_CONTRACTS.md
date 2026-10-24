@@ -25,7 +25,7 @@ Returned on the user object (`User.permissions`) and enforced server-side.
 | Role | Permissions |
 | --- | --- |
 | student | `profile:read:self`, `profile:update:self`, `courses:read:enrolled`, `live:join`, `recordings:watch`, `progress:update:self`, `payments:read:self`, `certificates:read:self` |
-| admin | `analytics:read`, `students:read`, `students:manage`, `courses:manage`, `batches:manage`, `enrollments:read`, `enrollments:manage`, `payments:read`, `payments:reconcile`, `certificates:manage`, `audit:read` |
+| admin | `analytics:read`, `students:read`, `students:manage`, `courses:manage`, `batches:manage`, `enrollments:read`, `enrollments:manage`, `payments:read`, `payments:reconcile`, `certificates:manage`, `referrals:manage`, `audit:read`, `content:manage` |
 
 `:self` permissions are always scoped to the caller's own records.
 
@@ -51,6 +51,7 @@ Returned on the user object (`User.permissions`) and enforced server-side.
 | `GET /courses/:idOrSlug/sessions` | `LiveSession[]` | Upcoming scheduled sessions for the course (no join info). |
 | `GET /live-sessions/upcoming?limit` | `LiveSession[]` | Next 45 days across published courses. |
 | `GET /trainers` | `Trainer[]` | |
+| `GET /hero-slides` | `PublicHeroSlide[]` (`{ id, imageUrl, alt, eyebrow, caption, focus }`) | Active home page hero slides in display order. `imageUrl` is absolute (external) or relative to the API host (uploaded, served by `GET /media/hero-slides/:file`). |
 | `GET /academy/stats` | `{ coursesOffered, enrolledStudents, expertTrainers, certificatesIssued, coursesCompleted, isDemoData }` | Computed from real records. |
 | `GET /certificates/verify/:number` | `CertificateVerificationResult` | `valid` is false for revoked or unknown numbers. Case-insensitive. |
 | `POST /contact` | `{ name, email, mobile, message }` → `{ received }` | **Not yet implemented** in the backend; the Contact page shows a notice instead of sending. |
@@ -142,6 +143,11 @@ Frontend guarantees: the success screen is shown only after `GET /student/paymen
 | `POST /admin/certificates/:id/revoke` | `certificates:manage` | `{ reason }` (≥ 5 chars). Audited; batch history event. |
 | `POST /admin/certificates/:id/reissue` | `certificates:manage` | `{ reason }`. Only revoked certificates; eligibility re-checked; new number issued. Audited. |
 | `GET /admin/audit-logs?search&entityType&from&to&page&pageSize` | `audit:read` | `Paginated<AuditLog>` |
+| `GET /admin/hero-slides` | `content:manage` | `AdminHeroSlide[]` incl. hidden slides, in display order. |
+| `POST /admin/hero-slides` | `content:manage` | Multipart with `image` (file, ≤ 5 MB) **or** JSON with `imageUrl` (http/https), plus `alt` (required), `eyebrow`, `caption`, `focus`, `isActive`. Appended to the end. 201 `AdminHeroSlide`. Audited. |
+| `PATCH /admin/hero-slides/:id` | `content:manage` | Any subset of the create fields; `image` or `imageUrl` replaces the picture (an old uploaded file is deleted). Audited. |
+| `DELETE /admin/hero-slides/:id` | `content:manage` | 204. Hard delete (site content, not a business record); uploaded file removed. Audited. |
+| `PUT /admin/hero-slides/order` | `content:manage` | `{ ids }` listing every slide exactly once (400 otherwise). Returns the reordered `AdminHeroSlide[]`. Audited. |
 
 ## Refer & Earn
 

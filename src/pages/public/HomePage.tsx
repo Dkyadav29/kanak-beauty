@@ -1,13 +1,15 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Award, BriefcaseBusiness, CalendarCheck2, GraduationCap, PlayCircle, Route, Sparkles, Users, Video } from 'lucide-react';
-import { useAcademyStats, useCourses, useUpcomingSessions } from '@/hooks/useCatalog';
+import { useAcademyStats, useCourses, useHeroSlides, useUpcomingSessions } from '@/hooks/useCatalog';
+import { resolveApiUrl } from '@/lib/api/client';
 import { useAuth } from '@/features/auth/AuthContext';
 import { IMAGES } from '@/config/images';
 import { CourseCard } from '@/components/shared/CourseCard';
 import { HeroSlider } from '@/components/shared/HeroSlider';
 import { LiveClassCard } from '@/components/shared/LiveClassCard';
-import { DemoBadge, EmptyState, ErrorState, ImageWithFallback, LinkButton, LoadingSkeleton, SectionHeading } from '@/components/ui';
+import { DemoBadge, EmptyState, ErrorState, ImageWithFallback, LinkButton, LoadingSkeleton, SectionHeading, Skeleton } from '@/components/ui';
 
 const features = [
   { icon: Sparkles, title: 'Expert-led practical training', text: 'Learn hands-on from working makeup artists, hairstylists and skincare specialists on real models.' },
@@ -28,19 +30,25 @@ const HomePage = () => {
   const courses = useCourses({ featured: true });
   const sessions = useUpcomingSessions(3);
   const stats = useAcademyStats();
+  const heroSlides = useHeroSlides();
   const { isAuthenticated } = useAuth();
+  const slides = useMemo(
+    () => (heroSlides.data ?? []).map((s) => ({ id: s.id, src: resolveApiUrl(s.imageUrl), alt: s.alt, eyebrow: s.eyebrow, caption: s.caption, focus: s.focus })),
+    [heroSlides.data],
+  );
+  const heroFrame = 'aspect-[4/3] rounded-none shadow-none sm:aspect-[16/9] lg:aspect-[21/9] lg:max-h-[80vh]';
 
   return (
     <>
-      {/* Hero: full-width image carousel banner (no copy, image only) */}
+      {/* Hero: full-width image carousel banner. Slides are managed by admins (Admin > Hero Slider). */}
       <section className="relative">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
-          <HeroSlider
-            slides={IMAGES.heroSlides}
-            intervalMs={2000}
-            className="aspect-[4/3] rounded-none shadow-none sm:aspect-[16/9] lg:aspect-[21/9] lg:max-h-[80vh]"
-          />
-        </motion.div>
+        {heroSlides.isLoading ? (
+          <Skeleton className={`w-full rounded-none ${heroFrame}`} />
+        ) : slides.length ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
+            <HeroSlider slides={slides} intervalMs={2000} className={heroFrame} />
+          </motion.div>
+        ) : null}
 
         {/* Trust stats strip under the banner */}
         <div className="container-x mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

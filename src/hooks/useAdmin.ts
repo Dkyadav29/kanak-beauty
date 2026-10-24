@@ -9,6 +9,7 @@ import type {
   CourseUpsertRequest,
   DateRangeFilter,
   EnrollmentFilters,
+  HeroSlideInput,
   LiveSessionUpsertRequest,
   PageQuery,
   PaymentFilters,
@@ -166,3 +167,17 @@ export const useUpdateReferralConfig = () => {
 // audit
 export const useAuditLogs = (filters: AuditLogFilters & PageQuery = {}) =>
   useQuery({ queryKey: queryKeys.admin.auditLogs(filters), queryFn: () => adminService.auditLogs(filters), placeholderData: (prev) => prev });
+
+// home page hero slider
+export const useAdminHeroSlides = () => useQuery({ queryKey: queryKeys.admin.heroSlides, queryFn: adminService.heroSlides });
+
+export const useHeroSlideMutations = () => {
+  const invalidate = useInvalidateAdmin();
+  const done = () => invalidate(queryKeys.admin.heroSlides, queryKeys.catalog.heroSlides);
+  return {
+    create: useMutation({ mutationFn: (input: HeroSlideInput) => adminService.createHeroSlide(input), onSuccess: done }),
+    update: useMutation({ mutationFn: ({ id, input }: { id: string; input: HeroSlideInput }) => adminService.updateHeroSlide(id, input), onSuccess: done }),
+    remove: useMutation({ mutationFn: (id: string) => adminService.deleteHeroSlide(id), onSuccess: done }),
+    reorder: useMutation({ mutationFn: (ids: string[]) => adminService.reorderHeroSlides(ids), onSuccess: done }),
+  };
+};

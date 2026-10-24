@@ -13,6 +13,7 @@ import {
   GraduationCap,
   History,
   Home,
+  Images,
   Layers,
   LogOut,
   Menu,
@@ -86,6 +87,10 @@ export const ADMIN_NAV: NavGroup[] = [
       { to: '/admin/certificates', label: 'Certificates', icon: ScrollText, permission: 'certificates:manage' },
       { to: '/admin/referrals', label: 'Refer & Earn', icon: Gift, permission: 'referrals:manage' },
     ],
+  },
+  {
+    title: 'Website',
+    items: [{ to: '/admin/hero-slides', label: 'Hero Slider', icon: Images, permission: 'content:manage' }],
   },
   {
     title: 'Governance',

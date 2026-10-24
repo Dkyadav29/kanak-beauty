@@ -31,6 +31,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'certificates:manage',
     'referrals:manage',
     'audit:read',
+    'content:manage',
   ],
 };
 

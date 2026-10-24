@@ -9,3 +9,4 @@ export * from './payment';
 export * from './certificate';
 export * from './admin';
 export * from './referral';
+export * from './content';

@@ -3,10 +3,13 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ImageWithFallback } from '@/components/ui';
+import type { HeroSlideFocus } from '@/types';
 
-export type HeroSlideFocus = 'center' | 'top' | 'bottom' | 'left' | 'right' | 'left-top' | 'right-top' | 'left-bottom' | 'right-bottom';
+export type { HeroSlideFocus };
 
 export interface HeroSlide {
+  /** Stable key; falls back to ``src``. */
+  id?: string;
   src: string;
   alt: string;
   eyebrow: string;
@@ -15,7 +18,7 @@ export interface HeroSlide {
   focus?: HeroSlideFocus;
 }
 
-const FOCUS_CLASS: Record<HeroSlideFocus, string> = {
+export const FOCUS_CLASS: Record<HeroSlideFocus, string> = {
   center: 'object-center',
   top: 'object-top',
   bottom: 'object-bottom',
@@ -92,7 +95,7 @@ export const HeroSlider = ({ slides, intervalMs = 5000, className }: HeroSliderP
       >
         {slides.map((slide, i) => (
           <div
-            key={slide.src}
+            key={slide.id ?? slide.src}
             className="relative h-full w-full shrink-0 select-none"
             role="group"
             aria-roledescription="slide"
@@ -106,12 +109,14 @@ export const HeroSlider = ({ slides, intervalMs = 5000, className }: HeroSliderP
               fallbackLabel="Kanak Academy"
               loading={Math.abs(i - index) <= 1 ? 'eager' : 'lazy'}
             />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal-900/85 via-charcoal-900/35 to-transparent pb-16 pt-24 text-white sm:pb-20">
-              <div className="container-x">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-300">{slide.eyebrow}</p>
-                <p className="mt-1 max-w-2xl font-display text-2xl font-semibold sm:text-3xl lg:text-4xl">{slide.caption}</p>
+            {slide.eyebrow || slide.caption ? (
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal-900/85 via-charcoal-900/35 to-transparent pb-16 pt-24 text-white sm:pb-20">
+                <div className="container-x">
+                  {slide.eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-300">{slide.eyebrow}</p> : null}
+                  {slide.caption ? <p className="mt-1 max-w-2xl font-display text-2xl font-semibold sm:text-3xl lg:text-4xl">{slide.caption}</p> : null}
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         ))}
       </motion.div>
@@ -142,11 +147,11 @@ export const HeroSlider = ({ slides, intervalMs = 5000, className }: HeroSliderP
           <div className="absolute inset-x-0 bottom-5 flex items-center justify-center gap-2" role="tablist" aria-label="Choose slide">
             {slides.map((s, i) => (
               <button
-                key={s.src}
+                key={s.id ?? s.src}
                 type="button"
                 role="tab"
                 aria-selected={i === index}
-                aria-label={`Go to slide ${i + 1}: ${s.eyebrow}`}
+                aria-label={`Go to slide ${i + 1}: ${s.eyebrow || s.alt}`}
                 onClick={() => go(i)}
                 className={cn(
                   'h-2.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white',

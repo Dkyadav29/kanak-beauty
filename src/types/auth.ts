@@ -30,7 +30,8 @@ export type Permission =
   | 'payments:reconcile'
   | 'certificates:manage'
   | 'referrals:manage'
-  | 'audit:read';
+  | 'audit:read'
+  | 'content:manage';
 
 export interface User {
   id: string;

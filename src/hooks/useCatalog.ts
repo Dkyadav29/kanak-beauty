@@ -21,6 +21,8 @@ export const useUpcomingSessions = (limit = 8) =>
 
 export const useTrainers = () => useQuery({ queryKey: queryKeys.catalog.trainers, queryFn: catalogService.trainers, staleTime: 5 * 60_000 });
 
+export const useHeroSlides = () => useQuery({ queryKey: queryKeys.catalog.heroSlides, queryFn: catalogService.heroSlides, staleTime: 60_000 });
+
 export const useAcademyStats = () => useQuery({ queryKey: queryKeys.catalog.stats, queryFn: catalogService.stats, staleTime: 5 * 60_000 });
 
 export const useValidateReferral = (code: string | undefined) =>
