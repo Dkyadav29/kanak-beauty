@@ -16,6 +16,7 @@ import type {
   ReferralFilters,
   ReferralProgramConfig,
   StudentFilters,
+  TrainerUpsertRequest,
 } from '@/types';
 import { queryKeys } from './queryKeys';
 
@@ -46,6 +47,15 @@ export const useAdminCourses = (filters: { search?: string; status?: string } = 
 export const useAdminCourse = (id: string | undefined) =>
   useQuery({ queryKey: queryKeys.admin.course(id ?? ''), queryFn: () => adminService.course(id!), enabled: !!id });
 export const useAdminTrainers = () => useQuery({ queryKey: queryKeys.admin.trainers, queryFn: adminService.trainers, staleTime: 5 * 60_000 });
+export const useTrainerMutations = () => {
+  const invalidate = useInvalidateAdmin();
+  // Trainer names show up on courses, batches and sessions, so refresh those too.
+  const done = () => invalidate(queryKeys.admin.trainers, queryKeys.admin.courses(), queryKeys.admin.batches(), queryKeys.admin.sessions(), ['catalog']);
+  return {
+    create: useMutation({ mutationFn: (p: TrainerUpsertRequest) => adminService.createTrainer(p), onSuccess: done }),
+    update: useMutation({ mutationFn: ({ id, payload }: { id: string; payload: TrainerUpsertRequest }) => adminService.updateTrainer(id, payload), onSuccess: done }),
+  };
+};
 export const useEnrolledStudents = (courseId: string | undefined) =>
   useQuery({ queryKey: queryKeys.admin.enrolledStudents(courseId ?? ''), queryFn: () => adminService.enrolledStudents(courseId!), enabled: !!courseId });
 

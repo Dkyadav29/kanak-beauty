@@ -35,7 +35,8 @@ import type {
   StudentDetailAdminView,
   StudentDirectoryRow,
   StudentFilters,
-  Trainer,
+  AdminTrainer,
+  TrainerUpsertRequest,
 } from '@/types';
 
 export interface CurriculumModuleInput {
@@ -95,7 +96,10 @@ export const adminService = {
     (await apiClient.put<Course>(`/admin/courses/${courseId}/modules`, { modules })).data,
   enrolledStudents: async (courseId: string) =>
     (await apiClient.get<EnrolledStudentOption[]>(`/admin/courses/${courseId}/enrolled-students`)).data,
-  trainers: async () => (await apiClient.get<Trainer[]>('/admin/trainers')).data,
+  trainers: async () => (await apiClient.get<AdminTrainer[]>('/admin/trainers')).data,
+  createTrainer: async (payload: TrainerUpsertRequest) => (await apiClient.post<AdminTrainer>('/admin/trainers', payload)).data,
+  updateTrainer: async (trainerId: string, payload: TrainerUpsertRequest) =>
+    (await apiClient.put<AdminTrainer>(`/admin/trainers/${trainerId}`, payload)).data,
 
   // batches
   batches: async (filters: BatchFilters & PageQuery = {}) => (await apiClient.get<Paginated<BatchSummary>>('/admin/batches', { params: filters })).data,

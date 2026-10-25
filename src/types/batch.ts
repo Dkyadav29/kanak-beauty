@@ -82,7 +82,8 @@ export interface BatchDetail extends BatchSummary {
 export interface BatchUpsertRequest {
   name: string;
   courseId: string;
-  trainerId: string | null;
+  /** Required; must be an active trainer (or the batch's current one). */
+  trainerId: string;
   startDate: string;
   endDate: string;
   capacity: number;

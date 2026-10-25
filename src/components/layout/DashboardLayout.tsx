@@ -22,6 +22,7 @@ import {
   ScrollText,
   Settings2,
   UserCircle2,
+  UserRoundCog,
   Users,
   Video,
   X,
@@ -74,6 +75,7 @@ export const ADMIN_NAV: NavGroup[] = [
     items: [
       { to: '/admin/students', label: 'Students', icon: Users, permission: 'students:read' },
       { to: '/admin/courses', label: 'Courses', icon: GraduationCap, permission: 'courses:manage' },
+      { to: '/admin/trainers', label: 'Trainers', icon: UserRoundCog, permission: 'courses:manage' },
       { to: '/admin/batches', label: 'Batches', icon: Layers, permission: 'batches:manage' },
       { to: '/admin/live-sessions', label: 'Live Sessions', icon: Video, permission: 'batches:manage' },
       { to: '/admin/batch-history', label: 'Batch History', icon: History, permission: 'batches:manage' },

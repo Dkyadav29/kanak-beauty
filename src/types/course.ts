@@ -15,6 +15,25 @@ export interface Trainer {
   specialities: string[];
 }
 
+/** GET /admin/trainers: adds admin-only contact details and the active flag. */
+export interface AdminTrainer extends Trainer {
+  mobile: string;
+  email: string;
+  isActive: boolean;
+}
+
+/** POST /admin/trainers, PUT /admin/trainers/{id}. ``isActive`` omitted on update keeps the current value. */
+export interface TrainerUpsertRequest {
+  name: string;
+  title: string;
+  mobile: string;
+  email: string;
+  bio: string;
+  avatarUrl: string | null;
+  specialities: string[];
+  isActive?: boolean;
+}
+
 export interface LearningMaterial {
   id: string;
   title: string;

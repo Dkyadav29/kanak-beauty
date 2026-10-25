@@ -69,7 +69,11 @@ const ScheduleDialog = ({ open, onClose, initialCourseId }: { open: boolean; onC
   // Pre-fill the trainer from the chosen course when none is selected yet.
   useEffect(() => {
     const course = courses.data?.find((c) => c.id === courseId);
-    if (course?.trainer) setValue('trainerId', course.trainer.id, { shouldDirty: true });
+    // Inactive trainers cannot take new sessions, so only an active course trainer is pre-filled.
+    const courseTrainer = course?.trainer && trainers.data?.find((t) => t.id === course.trainer!.id && t.isActive);
+    if (courseTrainer) setValue('trainerId', courseTrainer.id, { shouldDirty: true });
+  }, [courseId, courses.data, trainers.data, setValue]);
+  useEffect(() => {
     setValue('batchId', '');
   }, [courseId, courses.data, setValue]);
 
@@ -146,7 +150,7 @@ const ScheduleDialog = ({ open, onClose, initialCourseId }: { open: boolean; onC
         <FormField label="Trainer" htmlFor="ss-trainer" error={errors.trainerId?.message} required>
           <Select id="ss-trainer" invalid={!!errors.trainerId} {...register('trainerId')}>
             <option value="">Select a trainer</option>
-            {trainers.data?.map((t) => (
+            {trainers.data?.filter((t) => t.isActive).map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>

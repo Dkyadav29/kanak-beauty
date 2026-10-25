@@ -206,7 +206,7 @@ const CourseDetailsForm = ({ course }: { course?: Course }) => {
               <FormField label="Trainer" htmlFor="trainerId" error={errors.trainerId?.message} hint="Optional. You can assign a trainer later." className="sm:col-span-2">
                 <Select id="trainerId" invalid={!!errors.trainerId} {...register('trainerId')}>
                   <option value="">No trainer yet</option>
-                  {trainers.data?.map((t) => (
+                  {trainers.data?.filter((t) => t.isActive || t.id === course?.trainer?.id).map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name} — {t.title}
                     </option>
