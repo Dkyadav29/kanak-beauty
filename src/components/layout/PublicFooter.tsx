@@ -1,6 +1,47 @@
 import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Youtube, Mail, Phone, MapPin } from 'lucide-react';
+import { useCourses } from '@/hooks/useCatalog';
 import { Logo } from '@/components/ui';
+
+const FOOTER_COURSE_LIMIT = 5;
+
+type FooterLink = { to: string; label: string };
+
+const FooterColumn = ({ title, links, loading = false }: { title: string; links: FooterLink[]; loading?: boolean }) => (
+  <div>
+    <h4 className="font-sans text-xs font-semibold uppercase tracking-[0.18em] text-charcoal-500">{title}</h4>
+    <ul className="mt-4 space-y-2.5">
+      {loading
+        ? Array.from({ length: 3 }, (_, i) => (
+            <li key={`loading-${i}`} aria-hidden>
+              <span className="block h-4 w-40 max-w-full animate-pulse rounded bg-ivory-200" />
+            </li>
+          ))
+        : null}
+      {links.map((l) => (
+        <li key={l.to + l.label}>
+          <Link to={l.to} className="text-sm text-charcoal-700 transition-colors hover:text-rose-700">
+            {l.label}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+/**
+ * Published courses from the API (same request and cache as the courses page): featured first,
+ * then the rest in API order. "View all courses" is always shown, so the column still works
+ * while loading, on an API error or before any course is published.
+ */
+const CoursesColumn = () => {
+  const courses = useCourses();
+  const list = courses.data ?? [];
+  const ordered = [...list.filter((c) => c.featured), ...list.filter((c) => !c.featured)];
+  const links: FooterLink[] = ordered.slice(0, FOOTER_COURSE_LIMIT).map((c) => ({ to: `/courses/${c.slug}`, label: c.title }));
+  links.push({ to: '/courses', label: 'View all courses' });
+  return <FooterColumn title="Courses" links={links} loading={courses.isLoading} />;
+};
 
 const columns = [
   {
@@ -10,16 +51,6 @@ const columns = [
       { to: '/success-stories', label: 'Student Success Stories' },
       { to: '/contact', label: 'Contact Us' },
       { to: '/faq', label: 'FAQ' },
-    ],
-  },
-  {
-    title: 'Courses',
-    links: [
-      { to: '/courses/professional-makeup-artistry', label: 'Professional Makeup Artistry' },
-      { to: '/courses/bridal-makeup-masterclass', label: 'Bridal Makeup Masterclass' },
-      { to: '/courses/hair-styling-and-hair-care', label: 'Hair Styling & Hair Care' },
-      { to: '/courses/skincare-and-facial-techniques', label: 'Skincare & Facials' },
-      { to: '/courses', label: 'View all courses' },
     ],
   },
   {
@@ -64,20 +95,9 @@ export const PublicFooter = () => (
           ))}
         </div>
       </div>
-      {columns.map((c) => (
-        <div key={c.title}>
-          <h4 className="font-sans text-xs font-semibold uppercase tracking-[0.18em] text-charcoal-500">{c.title}</h4>
-          <ul className="mt-4 space-y-2.5">
-            {c.links.map((l) => (
-              <li key={l.to + l.label}>
-                <Link to={l.to} className="text-sm text-charcoal-700 transition-colors hover:text-rose-700">
-                  {l.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      <FooterColumn title={columns[0].title} links={columns[0].links} />
+      <CoursesColumn />
+      <FooterColumn title={columns[1].title} links={columns[1].links} />
     </div>
     <div className="border-t border-ivory-200">
       <div className="container-x flex flex-col items-center justify-between gap-2 py-5 text-xs text-charcoal-500 sm:flex-row">
