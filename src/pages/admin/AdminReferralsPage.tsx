@@ -20,9 +20,9 @@ type ConfigValues = z.infer<typeof configSchema>;
 
 const PAGE_SIZE = 10;
 
-/** "20% (₹1,999.80)" or "₹500". */
+/** "20% (₹1,999.80)" or "₹500". Shows the amount at today's price, so a fixed discount is capped at the course price. */
 const ruleLabel = (type: ReferralValueType, value: number, amount: number, currency: string) =>
-  type === 'percent' ? `${value}% (${formatCurrency(amount, currency)})` : formatCurrency(value, currency);
+  type === 'percent' ? `${value}% (${formatCurrency(amount, currency)})` : formatCurrency(amount, currency);
 
 const ruleValue = (label: string) =>
   z.coerce.number({ invalid_type_error: 'Enter a number' }).min(0, `${label} cannot be negative`);
