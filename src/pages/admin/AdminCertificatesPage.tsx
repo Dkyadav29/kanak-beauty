@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Award, Eye, RotateCcw, ShieldX } from 'lucide-react';
-import { useAdminCertificates, useAdminCourses, useCertificateMutations, useEligibleStudents } from '@/hooks/useAdmin';
+import { useAdminCertificate, useAdminCertificates, useAdminCourses, useCertificateMutations, useEligibleStudents } from '@/hooks/useAdmin';
 import { getErrorMessage } from '@/lib/api/errors';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import type { Certificate, CertificateFilters, EligibleStudent } from '@/types';
@@ -29,6 +29,8 @@ const IssuedTab = () => {
 
   const query = useMemo(() => ({ search: search || undefined, status: clean(filters.status) as CertificateFilters['status'], courseId: clean(filters.courseId), page, pageSize: PAGE_SIZE }), [search, filters, page]);
   const certificates = useAdminCertificates(query);
+  // The list has no signatures; the preview loads the full certificate (with its design).
+  const previewDetail = useAdminCertificate(preview?.id);
 
   const onSearch = useCallback((v: string) => {
     setSearch(v);
@@ -168,7 +170,7 @@ const IssuedTab = () => {
             </>
           }
         >
-          <CertificatePreview certificate={preview} />
+          <CertificatePreview certificate={previewDetail.data?.id === preview.id ? previewDetail.data : preview} />
           <KeyValue
             className="mt-5 sm:grid-cols-3"
             items={[

@@ -6,6 +6,9 @@ import type {
   BatchStatus,
   BatchUpsertRequest,
   CertificateFilters,
+  CertificateImageKind,
+  CertificateSettings,
+  CertificateSettingsUpdate,
   CourseUpsertRequest,
   DateRangeFilter,
   EnrollmentFilters,
@@ -54,6 +57,8 @@ export const useTrainerMutations = () => {
   return {
     create: useMutation({ mutationFn: (p: TrainerUpsertRequest) => adminService.createTrainer(p), onSuccess: done }),
     update: useMutation({ mutationFn: ({ id, payload }: { id: string; payload: TrainerUpsertRequest }) => adminService.updateTrainer(id, payload), onSuccess: done }),
+    uploadSignature: useMutation({ mutationFn: ({ id, file }: { id: string; file: File }) => adminService.uploadTrainerSignature(id, file), onSuccess: done }),
+    removeSignature: useMutation({ mutationFn: (id: string) => adminService.removeTrainerSignature(id), onSuccess: done }),
   };
 };
 export const useEnrolledStudents = (courseId: string | undefined) =>
@@ -189,5 +194,21 @@ export const useHeroSlideMutations = () => {
     update: useMutation({ mutationFn: ({ id, input }: { id: string; input: HeroSlideInput }) => adminService.updateHeroSlide(id, input), onSuccess: done }),
     remove: useMutation({ mutationFn: (id: string) => adminService.deleteHeroSlide(id), onSuccess: done }),
     reorder: useMutation({ mutationFn: (ids: string[]) => adminService.reorderHeroSlides(ids), onSuccess: done }),
+  };
+};
+
+// certificate settings (signatory, stamp, registration, numbering)
+export const useCertificateSettings = () => useQuery({ queryKey: queryKeys.admin.certificateSettings, queryFn: adminService.certificateSettings });
+export const useCertificateSettingsMutations = () => {
+  const qc = useQueryClient();
+  const invalidate = useInvalidateAdmin();
+  const done = (data: CertificateSettings) => {
+    qc.setQueryData(queryKeys.admin.certificateSettings, data);
+    invalidate(['admin', 'certificate']);
+  };
+  return {
+    update: useMutation({ mutationFn: (p: CertificateSettingsUpdate) => adminService.updateCertificateSettings(p), onSuccess: done }),
+    upload: useMutation({ mutationFn: ({ kind, file }: { kind: CertificateImageKind; file: File }) => adminService.uploadCertificateImage(kind, file), onSuccess: done }),
+    remove: useMutation({ mutationFn: (kind: CertificateImageKind) => adminService.removeCertificateImage(kind), onSuccess: done }),
   };
 };

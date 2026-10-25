@@ -355,12 +355,21 @@ const AdminBatchDetailPage = () => {
               loading={changeStatus.isPending}
               disabled={!nextStatus}
               onClick={() =>
-                void run(
-                  () => changeStatus.mutateAsync({ id: b.id, status: nextStatus as BatchStatus, reason: statusReason.trim() || undefined }),
-                  ['Status updated', `${b.code} is now ${nextStatus}.`],
-                  'Could not change status',
-                  () => setStatusOpen(false),
-                )
+                void (async () => {
+                  try {
+                    const res = await changeStatus.mutateAsync({ id: b.id, status: nextStatus as BatchStatus, reason: statusReason.trim() || undefined });
+                    const certs = res.certificateResult;
+                    toast.success(
+                      'Status updated',
+                      certs
+                        ? `${b.code} is completed. ${certs.issued} certificate${certs.issued === 1 ? '' : 's'} issued${certs.alreadyIssued ? `, ${certs.alreadyIssued} already had one` : ''}${certs.skipped ? `, ${certs.skipped} skipped (payment not received or not enrolled)` : ''}.`
+                        : `${b.code} is now ${nextStatus}.`,
+                    );
+                    setStatusOpen(false);
+                  } catch (e) {
+                    toast.error('Could not change status', getErrorMessage(e));
+                  }
+                })()
               }
             >
               Confirm

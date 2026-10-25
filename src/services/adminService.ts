@@ -37,6 +37,10 @@ import type {
   StudentFilters,
   AdminTrainer,
   TrainerUpsertRequest,
+  BatchCertificateResult,
+  CertificateImageKind,
+  CertificateSettings,
+  CertificateSettingsUpdate,
 } from '@/types';
 
 export interface CurriculumModuleInput {
@@ -76,6 +80,14 @@ const heroSlideRequest = (input: HeroSlideInput) => {
   return { body: form, config: { headers: { 'Content-Type': 'multipart/form-data' } } };
 };
 
+/** Single image as multipart `file` (trainer signature, certificate stamp, ...). */
+const imageForm = (file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return form;
+};
+const multipart = { headers: { 'Content-Type': 'multipart/form-data' } };
+
 export const adminService = {
   // overview
   overview: async (range: DateRangeFilter = {}) => (await apiClient.get<AdminOverviewStats>('/admin/overview', { params: range })).data,
@@ -102,6 +114,9 @@ export const adminService = {
   createTrainer: async (payload: TrainerUpsertRequest) => (await apiClient.post<AdminTrainer>('/admin/trainers', payload)).data,
   updateTrainer: async (trainerId: string, payload: TrainerUpsertRequest) =>
     (await apiClient.put<AdminTrainer>(`/admin/trainers/${trainerId}`, payload)).data,
+  uploadTrainerSignature: async (trainerId: string, file: File) =>
+    (await apiClient.post<AdminTrainer>(`/admin/trainers/${trainerId}/signature`, imageForm(file), multipart)).data,
+  removeTrainerSignature: async (trainerId: string) => (await apiClient.delete<AdminTrainer>(`/admin/trainers/${trainerId}/signature`)).data,
 
   // batches
   batches: async (filters: BatchFilters & PageQuery = {}) => (await apiClient.get<Paginated<BatchSummary>>('/admin/batches', { params: filters })).data,
@@ -109,7 +124,7 @@ export const adminService = {
   createBatch: async (payload: BatchUpsertRequest) => (await apiClient.post<Batch>('/admin/batches', payload)).data,
   updateBatch: async (batchId: string, payload: BatchUpsertRequest) => (await apiClient.put<Batch>(`/admin/batches/${batchId}`, payload)).data,
   changeBatchStatus: async (batchId: string, status: BatchStatus, reason?: string) =>
-    (await apiClient.post<Batch>(`/admin/batches/${batchId}/status`, { status, reason })).data,
+    (await apiClient.post<Batch & { certificateResult?: BatchCertificateResult }>(`/admin/batches/${batchId}/status`, { status, reason })).data,
   addBatchStudent: async (batchId: string, studentId: string) =>
     (await apiClient.post<BatchEnrollment>(`/admin/batches/${batchId}/students`, { studentId })).data,
   withdrawBatchStudent: async (batchId: string, studentId: string, reason?: string) =>
@@ -146,6 +161,13 @@ export const adminService = {
   eligibleStudents: async () => (await apiClient.get<EligibleStudent[]>('/admin/certificates/eligible/list')).data,
   issueCertificate: async (payload: { studentId: string; courseId: string }) =>
     (await apiClient.post<Certificate>('/admin/certificates/issue', payload)).data,
+  certificateSettings: async () => (await apiClient.get<CertificateSettings>('/admin/certificate-settings')).data,
+  updateCertificateSettings: async (payload: CertificateSettingsUpdate) =>
+    (await apiClient.put<CertificateSettings>('/admin/certificate-settings', payload)).data,
+  uploadCertificateImage: async (kind: CertificateImageKind, file: File) =>
+    (await apiClient.post<CertificateSettings>(`/admin/certificate-settings/images/${kind}`, imageForm(file), multipart)).data,
+  removeCertificateImage: async (kind: CertificateImageKind) =>
+    (await apiClient.delete<CertificateSettings>(`/admin/certificate-settings/images/${kind}`)).data,
   revokeCertificate: async (certificateId: string, reason: string) =>
     (await apiClient.post<Certificate>(`/admin/certificates/${certificateId}/revoke`, { reason })).data,
   reissueCertificate: async (certificateId: string, reason: string) =>

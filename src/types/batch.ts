@@ -126,6 +126,14 @@ export interface StudentBatch {
   recordingLink: string | null;
 }
 
+/** Returned when a batch is completed: certificates issued automatically to verified members. */
+export interface BatchCertificateResult {
+  issued: number;
+  alreadyIssued: number;
+  /** Members without a received payment / active enrollment, or certificates disabled for the course. */
+  skipped: number;
+}
+
 export interface BatchFilters {
   search?: string;
   courseId?: string;

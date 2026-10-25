@@ -46,6 +46,7 @@ export const queryKeys = {
     certificates: (filters: object = {}) => ['admin', 'certificates', filters] as const,
     certificate: (id: string) => ['admin', 'certificate', id] as const,
     eligible: ['admin', 'certificates', 'eligible'] as const,
+    certificateSettings: ['admin', 'certificate-settings'] as const,
     auditLogs: (filters: object = {}) => ['admin', 'audit', filters] as const,
     referrals: (filters: object = {}) => ['admin', 'referrals', filters] as const,
     referralStats: ['admin', 'referrals', 'stats'] as const,

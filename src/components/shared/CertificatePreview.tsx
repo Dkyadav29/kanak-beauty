@@ -1,84 +1,141 @@
+import type { CSSProperties, ReactNode } from 'react';
 import type { Certificate } from '@/types';
-import { env } from '@/config/env';
 import { cn, formatDate } from '@/lib/utils';
 
 /**
- * Printable certificate layout. The official PDF is produced by the backend or a
- * trusted certificate service; this preview renders the same data for on-screen
- * display and browser printing.
+ * The Kanak certificate: the academy's artwork (public/certificate/template.jpg, A4 landscape)
+ * with the student, course, trainer and signatory printed on top. Positions are fractions of
+ * the page measured from the original design, so the on-screen and printed versions match.
+ * Text sizes use container units (cqw) so the layout scales with the card width.
  */
-export const CertificatePreview = ({ certificate, className, printable }: { certificate: Certificate; className?: string; printable?: boolean }) => {
-  const verifyUrl = `${env.publicSiteUrl}${certificate.verificationUrl}`;
+const MAROON = '#5b1a24';
+const SERIF = 'Georgia, "DejaVu Serif", "Times New Roman", serif';
+const SANS = 'Arial, "Helvetica Neue", "DejaVu Sans", sans-serif';
+
+/** Absolutely placed block, centred on (x%, y%) of the page. */
+const At = ({ x, y, w, children, style }: { x: number; y: number; w: number; children: ReactNode; style?: CSSProperties }) => (
+  <div className="absolute text-center" style={{ left: `${x - w / 2}%`, top: `${y}%`, width: `${w}%`, transform: 'translateY(-50%)', ...style }}>
+    {children}
+  </div>
+);
+
+const Img = ({ src, alt, box }: { src: string | null | undefined; alt: string; box: { x: number; y: number; w: number; h: number } }) =>
+  src ? (
+    <img
+      src={src}
+      alt={alt}
+      className="absolute object-contain"
+      style={{ left: `${box.x}%`, top: `${box.y}%`, width: `${box.w}%`, height: `${box.h}%` }}
+      draggable={false}
+    />
+  ) : null;
+
+export const CertificatePreview = ({ certificate, className }: { certificate: Certificate; className?: string; printable?: boolean }) => {
+  const d = certificate.design;
+  const org = d?.organisationName || 'Kanak Beauty Service';
   const revoked = certificate.status === 'revoked';
+  const issued = formatDate(certificate.issuedAt, { day: '2-digit', month: 'short', year: 'numeric' });
+
   return (
     <div
-      className={cn(
-        'relative aspect-[1.414/1] w-full overflow-hidden rounded-2xl border border-gold-200 bg-[#fffdf8] text-charcoal-900 shadow-soft',
-        printable && 'rounded-none border-0 shadow-none',
-        className,
-      )}
+      className={cn('certificate relative w-full overflow-hidden bg-[#f6efe4] shadow-soft [container-type:inline-size]', className)}
+      style={{ aspectRatio: '2339 / 1654' }}
       role="img"
-      aria-label={`Certificate ${certificate.certificateNumber} for ${certificate.studentName}`}
+      aria-label={`Certificate ${certificate.certificateNumber} for ${certificate.studentName}, ${certificate.courseTitle}`}
     >
-      {/* decorative frame */}
-      <div className="pointer-events-none absolute inset-[3%] rounded-xl border-[3px] border-gold-400" />
-      <div className="pointer-events-none absolute inset-[4.2%] rounded-lg border border-gold-300" />
-      <div className="pointer-events-none absolute -left-[12%] -top-[22%] h-[55%] w-[55%] rounded-full bg-rose-100/60 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-[25%] -right-[12%] h-[60%] w-[60%] rounded-full bg-gold-100/70 blur-3xl" />
+      <img src="/certificate/template.jpg" alt="" className="absolute inset-0 h-full w-full select-none" draggable={false} />
+
+      {/* Student name, above the gold line */}
+      <At x={50} y={52.6} w={64}>
+        <p className="truncate font-bold leading-none" style={{ fontFamily: SERIF, color: MAROON, fontSize: '2.75cqw' }}>
+          {certificate.studentName}
+        </p>
+      </At>
+
+      {/* Course box */}
+      <div
+        className="absolute flex flex-col items-center justify-center rounded-[0.6cqw] border text-center"
+        style={{ left: '27.9%', top: '62%', width: '44.2%', height: '7.8%', borderColor: '#c9a24b', background: 'rgba(255,250,242,0.55)' }}
+      >
+        <p className="w-[96%] truncate font-bold uppercase leading-tight tracking-[0.02em]" style={{ fontFamily: SANS, color: MAROON, fontSize: '1.7cqw' }}>
+          {certificate.courseTitle}
+        </p>
+        <p className="mt-[0.25cqw] leading-tight text-[#222]" style={{ fontFamily: SANS, fontSize: '1.1cqw' }}>
+          {d?.durationLabel ? <>Duration: {d.durationLabel}&nbsp;&nbsp;|&nbsp;&nbsp;</> : null}
+          {org}
+        </p>
+      </div>
+
+      {/* Appreciation */}
+      {d?.appreciationText !== '' ? (
+        <At x={50} y={72.7} w={31}>
+          <p className="leading-snug text-[#222]" style={{ fontFamily: SANS, fontSize: '1.16cqw' }}>
+            {d?.appreciationText ?? 'We appreciate the dedication, hard work and passion shown during the course.'}
+          </p>
+        </At>
+      ) : null}
+
+      {/* Trainer: signature, line, name, title, organisation */}
+      <Img src={d?.trainerSignature} alt={`Signature of ${d?.trainerName ?? 'the trainer'}`} box={{ x: 33.5, y: 74.3, w: 16, h: 6.2 }} />
+      <div className="absolute" style={{ left: '30.2%', top: '80.4%', width: '22.6%', height: '0.12%', background: '#b8892f' }} />
+      <At x={41.5} y={82.3} w={24}>
+        <p className="truncate font-bold leading-none" style={{ fontFamily: SERIF, color: MAROON, fontSize: '1.3cqw' }}>
+          {d?.trainerName || ' '}
+        </p>
+      </At>
+      <At x={41.5} y={85.1} w={24}>
+        <p className="leading-tight text-[#222]" style={{ fontFamily: SANS, fontSize: '1.02cqw' }}>
+          {d?.trainerTitle}
+          {d?.trainerName ? <span className="block">{org}</span> : null}
+        </p>
+      </At>
+
+      {/* Issue date (the "ISSUE DATE" label is part of the artwork) */}
+      <At x={22} y={85.4} w={14}>
+        <p className="leading-none text-[#222]" style={{ fontFamily: SANS, fontSize: '1.08cqw' }}>
+          {issued}
+        </p>
+      </At>
+
+      {/* Authorised signatory: stamp + signature, line, name, title, organisation, registration */}
+      <Img src={d?.signatoryStamp} alt="Academy stamp" box={{ x: 70.8, y: 73.4, w: 14.6, h: 7.2 }} />
+      <Img src={d?.signatorySignature} alt={`Signature of ${d?.signatoryName ?? 'the signatory'}`} box={{ x: 72.5, y: 74.6, w: 11.5, h: 5.6 }} />
+      <div className="absolute" style={{ left: '66.7%', top: '80.8%', width: '23.5%', height: '0.12%', background: '#b8892f' }} />
+      <At x={78.4} y={82.8} w={26}>
+        <p className="truncate font-bold leading-none" style={{ fontFamily: SERIF, color: MAROON, fontSize: '1.3cqw' }}>
+          {d?.signatoryName || ' '}
+        </p>
+      </At>
+      <At x={78.4} y={85.6} w={26}>
+        <p className="leading-tight text-[#222]" style={{ fontFamily: SANS, fontSize: '1.02cqw' }}>
+          {d?.signatoryTitle}
+          {d?.signatoryName ? <span className="block">{org}</span> : null}
+        </p>
+      </At>
+      <Img src={d?.registrationLogo} alt="" box={{ x: 74.6, y: 88.9, w: 3.4, h: 3.6 }} />
+      {d?.registrationNumber ? (
+        <At x={78.4} y={93.7} w={26}>
+          <p className="font-bold leading-none text-[#222]" style={{ fontFamily: SANS, fontSize: '0.76cqw' }}>
+            {d.registrationLabel ? `${d.registrationLabel}: ` : ''}
+            {d.registrationNumber}
+          </p>
+        </At>
+      ) : null}
+
+      {/* Certificate number */}
+      <At x={50} y={96} w={40}>
+        <p className="leading-none text-[#222]" style={{ fontFamily: SANS, fontSize: '0.86cqw' }}>
+          Certificate No.: {certificate.certificateNumber}
+        </p>
+      </At>
 
       {revoked ? (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-          <span className="-rotate-12 rounded-xl border-4 border-red-600/70 px-6 py-2 font-sans text-[clamp(1rem,4cqw,2.5rem)] font-black uppercase tracking-widest text-red-600/70">Revoked</span>
+          <span className="-rotate-12 rounded-xl border-4 border-red-600/70 bg-white/40 px-6 py-2 font-sans text-[4cqw] font-black uppercase tracking-widest text-red-600/80">
+            Revoked
+          </span>
         </div>
       ) : null}
-
-      <div className="absolute inset-[9%] flex flex-col items-center justify-between text-center [container-type:inline-size]">
-        <div className="flex flex-col items-center">
-          <div className="flex items-center gap-2">
-            <span className="flex h-[clamp(1.5rem,5cqw,2.75rem)] w-[clamp(1.5rem,5cqw,2.75rem)] items-center justify-center rounded-lg bg-rose-600 text-white">
-              <svg viewBox="0 0 64 64" className="h-[60%] w-[60%]" aria-hidden>
-                <path d="M20 16v32M20 32l20-16M20 32l20 16" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              </svg>
-            </span>
-            <span className="text-left leading-none">
-              <span className="block font-display text-[clamp(0.9rem,3.2cqw,1.6rem)] font-bold">Kanak</span>
-              <span className="block text-[clamp(0.4rem,1.3cqw,0.65rem)] font-semibold uppercase tracking-[0.22em] text-gold-700">Beauty Service</span>
-            </span>
-          </div>
-          <p className="mt-[3cqw] text-[clamp(0.5rem,1.6cqw,0.8rem)] font-semibold uppercase tracking-[0.3em] text-gold-700">Certificate of Completion</p>
-        </div>
-
-        <div className="flex flex-col items-center">
-          <p className="text-[clamp(0.55rem,1.7cqw,0.85rem)] text-charcoal-500">This certifies that</p>
-          <p className="mt-[1cqw] font-display text-[clamp(1.3rem,5.5cqw,3rem)] font-semibold leading-tight text-rose-700">{certificate.studentName}</p>
-          <div className="my-[1.2cqw] h-px w-[40%] bg-gradient-to-r from-transparent via-gold-400 to-transparent" />
-          <p className="text-[clamp(0.55rem,1.7cqw,0.85rem)] text-charcoal-500">has successfully completed the professional programme</p>
-          <p className="mt-[1cqw] font-display text-[clamp(0.9rem,3.2cqw,1.7rem)] font-semibold">{certificate.courseTitle}</p>
-          <p className="mt-[1cqw] text-[clamp(0.5rem,1.5cqw,0.75rem)] text-charcoal-500">
-            Completed on {formatDate(certificate.completionDate, { day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
-        </div>
-
-        <div className="grid w-full grid-cols-3 items-end gap-2 text-left text-[clamp(0.42rem,1.3cqw,0.68rem)]">
-          <div>
-            <p className="font-semibold uppercase tracking-wider text-charcoal-500">Certificate No.</p>
-            <p className="font-mono font-semibold">{certificate.certificateNumber}</p>
-            <p className="mt-[0.6cqw] text-charcoal-500">Issued {formatDate(certificate.issuedAt)}</p>
-          </div>
-          <div className="flex flex-col items-center">
-            <div className="flex h-[clamp(2rem,8cqw,4.5rem)] w-[clamp(2rem,8cqw,4.5rem)] items-center justify-center rounded-full border-[3px] border-gold-400 bg-gold-50">
-              <span className="font-display text-[clamp(0.7rem,2.6cqw,1.4rem)] font-bold text-gold-800">KBA</span>
-            </div>
-            <p className="mt-[0.5cqw] text-center text-charcoal-500">Academy seal</p>
-          </div>
-          <div className="text-right">
-            <p className="font-display text-[clamp(0.8rem,2.6cqw,1.3rem)] italic text-charcoal-800">{certificate.issuedBy}</p>
-            <div className="ml-auto mt-[0.3cqw] h-px w-[70%] bg-charcoal-800" />
-            <p className="mt-[0.5cqw] font-semibold uppercase tracking-wider text-charcoal-500">Authorised issuer</p>
-            <p className="mt-[0.6cqw] break-all text-charcoal-500">Verify: {verifyUrl}</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

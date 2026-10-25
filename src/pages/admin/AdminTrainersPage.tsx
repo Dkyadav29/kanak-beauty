@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Pencil, Plus, UserCheck, UserX } from 'lucide-react';
+import { PenLine, Pencil, Plus, UserCheck, UserX } from 'lucide-react';
+import { ImagePickerField } from '@/components/shared/ImagePickerField';
 import { useAdminTrainers, useTrainerMutations } from '@/hooks/useAdmin';
 import { ApiError, getErrorMessage } from '@/lib/api/errors';
 import type { AdminTrainer, TrainerUpsertRequest } from '@/types';
@@ -67,9 +68,12 @@ const rowPayload = (t: AdminTrainer, isActive: boolean): TrainerUpsertRequest =>
 });
 
 const TrainerFormDialog = ({ open, trainer, onClose }: { open: boolean; trainer: AdminTrainer | null; onClose: () => void }) => {
-  const { create, update } = useTrainerMutations();
+  const { create, update, uploadSignature, removeSignature } = useTrainerMutations();
   const toast = useToast();
   const [serverError, setServerError] = useState<string | null>(null);
+  // Signature changes are applied after the trainer itself is saved.
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [signatureRemoved, setSignatureRemoved] = useState(false);
   const {
     register,
     handleSubmit,
@@ -82,13 +86,16 @@ const TrainerFormDialog = ({ open, trainer, onClose }: { open: boolean; trainer:
     if (!open) return;
     reset(toValues(trainer));
     setServerError(null);
+    setSignatureFile(null);
+    setSignatureRemoved(false);
   }, [open, trainer, reset]);
 
   const submit = async (v: FormValues) => {
     setServerError(null);
     try {
-      if (trainer) await update.mutateAsync({ id: trainer.id, payload: toPayload(v) });
-      else await create.mutateAsync(toPayload(v));
+      const saved = trainer ? await update.mutateAsync({ id: trainer.id, payload: toPayload(v) }) : await create.mutateAsync(toPayload(v));
+      if (signatureFile) await uploadSignature.mutateAsync({ id: saved.id, file: signatureFile });
+      else if (signatureRemoved && trainer?.signatureImage) await removeSignature.mutateAsync(saved.id);
       toast.success(trainer ? 'Trainer updated' : 'Trainer added', v.name.trim());
       onClose();
     } catch (e) {
@@ -130,7 +137,7 @@ const TrainerFormDialog = ({ open, trainer, onClose }: { open: boolean; trainer:
         <FormField label="Full name" htmlFor="tr-name" error={errors.name?.message} required>
           <Input id="tr-name" autoComplete="off" invalid={!!errors.name} {...register('name')} />
         </FormField>
-        <FormField label="Title" htmlFor="tr-title" error={errors.title?.message} hint="e.g. Senior Makeup Educator" required>
+        <FormField label="Title" htmlFor="tr-title" error={errors.title?.message} hint="Printed under the signature on certificates, e.g. Hairstyle Trainer & Educator" required>
           <Input id="tr-title" invalid={!!errors.title} {...register('title')} />
         </FormField>
         <FormField label="Mobile number" htmlFor="tr-mobile" error={errors.mobile?.message} required>
@@ -148,6 +155,23 @@ const TrainerFormDialog = ({ open, trainer, onClose }: { open: boolean; trainer:
         <FormField label="Photo URL" htmlFor="tr-avatar" error={errors.avatarUrl?.message} hint="Optional direct link to a photo" className="sm:col-span-2">
           <Input id="tr-avatar" type="url" placeholder="https://…" invalid={!!errors.avatarUrl} {...register('avatarUrl')} />
         </FormField>
+        <ImagePickerField
+          className="sm:col-span-2"
+          label="Signature for certificates"
+          hint="Printed above this trainer's name on every certificate of their batches. Use a PNG with a transparent background; it is never shown on the public website. Changing it does not alter certificates already issued."
+          current={trainer?.signatureImage}
+          pending={signatureFile}
+          removed={signatureRemoved}
+          onPick={(file) => {
+            setSignatureFile(file);
+            setSignatureRemoved(false);
+          }}
+          onRemove={() => {
+            setSignatureFile(null);
+            setSignatureRemoved(true);
+          }}
+          onError={(message) => toast.error('Signature not added', message)}
+        />
         <Checkbox
           id="tr-active"
           className="sm:col-span-2"
@@ -228,6 +252,19 @@ const AdminTrainersPage = () => {
         </div>
       ),
       hideBelow: 'md',
+    },
+    {
+      key: 'signature',
+      header: 'Signature',
+      render: (t) =>
+        t.signatureImage ? (
+          <img src={t.signatureImage} alt={`Signature of ${t.name}`} className="h-8 max-w-[7rem] object-contain" />
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs text-amber-700">
+            <PenLine className="h-3.5 w-3.5" /> Not uploaded
+          </span>
+        ),
+      hideBelow: 'lg',
     },
     {
       key: 'status',

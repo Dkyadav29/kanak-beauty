@@ -20,6 +20,8 @@ export interface AdminTrainer extends Trainer {
   mobile: string;
   email: string;
   isActive: boolean;
+  /** Certificate signature as a data: URI; null until uploaded. Admin-only. */
+  signatureImage: string | null;
 }
 
 /** POST /admin/trainers, PUT /admin/trainers/{id}. ``isActive`` omitted on update keeps the current value. */
