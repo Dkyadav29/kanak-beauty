@@ -105,7 +105,21 @@ const CourseDetailsPage = () => {
               <PriceTag price={c.price} discountPrice={c.discountPrice} currency={c.currency} size="lg" />
               <p className="mt-1 text-xs text-charcoal-500">One-time payment · Secure checkout · GST as applicable</p>
               <div className="mt-5 space-y-2">
-                {enrolled ? (
+                {enrolled?.isCompleted ? (
+                  <>
+                    <p className="flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                      <CheckCircle2 className="h-4 w-4" /> You have already completed this course
+                    </p>
+                    <LinkButton to={`/student/courses/${c.id}/learn`} variant="outline" className="w-full" size="lg">
+                      Revisit course
+                    </LinkButton>
+                    {enrolled.certificateId ? (
+                      <LinkButton to={`/student/certificates/${enrolled.certificateId}`} variant="ghost" className="w-full">
+                        View certificate
+                      </LinkButton>
+                    ) : null}
+                  </>
+                ) : enrolled ? (
                   <LinkButton to={`/student/courses/${c.id}/learn`} className="w-full" size="lg">
                     Continue learning
                   </LinkButton>

@@ -11,6 +11,7 @@ import type {
   RecordingPlaybackResponse,
   ReferralSummary,
   StudentBatch,
+  StudentBatchPhase,
   StudentLiveSession,
   StudentProfile,
   UpdateLessonProgressRequest,
@@ -47,7 +48,8 @@ export const studentService = {
     (await apiClient.put<CourseProgressSummary>(`/student/courses/${courseId}/lessons/${lessonId}/progress`, payload)).data,
 
   // batches (schedule + protected Google Meet / recording links)
-  batches: async (courseId?: string) => (await apiClient.get<StudentBatch[]>('/student/batches', { params: courseId ? { courseId } : {} })).data,
+  batches: async (courseId?: string, phase?: StudentBatchPhase | 'current') =>
+    (await apiClient.get<StudentBatch[]>('/student/batches', { params: { ...(courseId ? { courseId } : {}), ...(phase ? { phase } : {}) } })).data,
 
   // live
   liveSessions: async (scope: 'upcoming' | 'past' | 'all' = 'upcoming') =>

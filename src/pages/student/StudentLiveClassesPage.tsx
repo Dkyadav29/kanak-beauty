@@ -57,7 +57,7 @@ const StudentLiveClassesPage = () => {
       <PageHeader title="Live Classes" description="Scheduled live sessions for your enrolled courses. The join button activates within each class's join window." />
       <section className="mb-8">
         <h2 className="mb-3 font-display text-2xl font-semibold">My batches</h2>
-        <BatchAccessCard emptyMessage="You'll see your batch schedule and Google Meet link here once you're placed in a batch after enrolling." />
+        <BatchAccessCard phase="current" emptyMessage="You'll see your batch schedule and Google Meet link here once you're placed in a batch after enrolling." />
       </section>
       <Tabs className="mb-6 w-fit" value={tab} onChange={(v) => setTab(v as 'upcoming' | 'past')} items={[{ value: 'upcoming', label: 'Upcoming' }, { value: 'past', label: 'Past sessions' }]} />
       {sessions.isLoading ? (

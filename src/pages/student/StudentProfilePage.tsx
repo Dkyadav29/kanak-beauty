@@ -9,6 +9,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { ApiError, getErrorMessage } from '@/lib/api/errors';
 import { formatDate, imageFileToDataUrl } from '@/lib/utils';
 import type { NotificationPreferences } from '@/types';
+import { MyBatchesSection } from '@/components/shared/BatchAccessCard';
 import { Avatar, Button, Card, CardBody, CardHeader, ErrorState, FormField, Input, KeyValue, LoadingSkeleton, PageHeader, Switch, Textarea, useToast } from '@/components/ui';
 
 const profileSchema = z.object({
@@ -138,6 +139,7 @@ const StudentProfilePage = () => {
         </div>
 
         <div className="space-y-6">
+          <MyBatchesSection title="My batches" />
           <Card>
             <CardHeader title="Personal information" description="These details appear on your certificates and receipts." />
             <CardBody>

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { paymentService, studentService } from '@/services';
-import type { ChangePasswordRequest, RazorpayVerifyRequest, UpdateLessonProgressRequest, UpdateProfileRequest } from '@/types';
+import type { ChangePasswordRequest, RazorpayVerifyRequest, StudentBatchPhase, UpdateLessonProgressRequest, UpdateProfileRequest } from '@/types';
 import { queryKeys } from './queryKeys';
 
 export const useStudentDashboard = () => useQuery({ queryKey: queryKeys.student.dashboard, queryFn: studentService.dashboard });
@@ -93,5 +93,5 @@ export const useCompleteSandboxCheckout = () => {
 };
 
 /** The student's batches with schedule and protected session links (server-authorised). */
-export const useMyBatches = (courseId?: string) =>
-  useQuery({ queryKey: queryKeys.student.batches(courseId), queryFn: () => studentService.batches(courseId) });
+export const useMyBatches = (courseId?: string, phase?: StudentBatchPhase | 'current') =>
+  useQuery({ queryKey: queryKeys.student.batches(courseId, phase), queryFn: () => studentService.batches(courseId, phase) });

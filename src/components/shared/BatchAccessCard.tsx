@@ -1,8 +1,21 @@
-import { CalendarDays, Clock, PlayCircle, User, Video } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CalendarDays, CheckCircle2, Clock, PlayCircle, User, Video } from 'lucide-react';
 import { useMyBatches } from '@/hooks/useStudent';
 import { formatClassTime, formatDate } from '@/lib/utils';
-import type { StudentBatch } from '@/types';
-import { StatusBadge, buttonClasses } from '@/components/ui';
+import type { StudentBatch, StudentBatchPhase } from '@/types';
+import { Badge, EmptyState, LinkButton, buttonClasses } from '@/components/ui';
+
+const PHASE_BADGE: Record<StudentBatchPhase, { tone: 'info' | 'success' | 'neutral'; label: string }> = {
+  upcoming: { tone: 'info', label: 'Upcoming' },
+  live: { tone: 'success', label: 'Live now' },
+  completed: { tone: 'neutral', label: 'Completed' },
+};
+
+export const BatchPhaseBadge = ({ phase }: { phase: StudentBatchPhase }) => (
+  <Badge tone={PHASE_BADGE[phase].tone} dot>
+    {PHASE_BADGE[phase].label}
+  </Badge>
+);
 
 /**
  * Schedule plus the Google Meet / recording links for the student's batches.
@@ -20,7 +33,7 @@ const BatchRow = ({ batch, showCourse }: { batch: StudentBatch; showCourse: bool
             {batch.name} <span className="font-mono text-sm font-normal text-charcoal-500">{batch.code}</span>
           </h3>
         </div>
-        <StatusBadge status={batch.status} />
+        <BatchPhaseBadge phase={batch.phase} />
       </div>
       <ul className="mt-3 grid gap-1.5 text-sm text-charcoal-700 sm:grid-cols-2">
         <li className="flex items-center gap-2">
@@ -43,7 +56,7 @@ const BatchRow = ({ batch, showCourse }: { batch: StudentBatch; showCourse: bool
           <a href={batch.meetLink} target="_blank" rel="noopener noreferrer" className={buttonClasses('primary', 'md', 'gap-2')}>
             <Video className="h-4 w-4" /> Join Google Meet
           </a>
-        ) : batch.status === 'scheduled' || batch.status === 'active' ? (
+        ) : batch.phase !== 'completed' ? (
           <span className="text-sm text-charcoal-500">The live-class link will appear here once your trainer adds it.</span>
         ) : null}
         {batch.recordingLink ? (
@@ -57,8 +70,8 @@ const BatchRow = ({ batch, showCourse }: { batch: StudentBatch; showCourse: bool
   );
 };
 
-export const BatchAccessCard = ({ courseId, emptyMessage }: { courseId?: string; emptyMessage?: string }) => {
-  const batches = useMyBatches(courseId);
+export const BatchAccessCard = ({ courseId, emptyMessage, phase }: { courseId?: string; emptyMessage?: string; phase?: StudentBatchPhase | 'current' }) => {
+  const batches = useMyBatches(courseId, phase);
   if (batches.isLoading || batches.error) return null;
   const list = batches.data ?? [];
   if (list.length === 0) {
@@ -70,5 +83,82 @@ export const BatchAccessCard = ({ courseId, emptyMessage }: { courseId?: string;
         <BatchRow key={b.id} batch={b} showCourse={!courseId} />
       ))}
     </div>
+  );
+};
+
+/** One finished batch: course, dates and the recording if there is one. */
+const CompletedBatchRow = ({ batch }: { batch: StudentBatch }) => (
+  <li className="flex flex-wrap items-center gap-3 p-4">
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+      <CheckCircle2 className="h-5 w-5" />
+    </span>
+    <div className="min-w-0 flex-1">
+      <Link to={`/student/courses/${batch.courseId}/learn`} className="block truncate text-sm font-semibold hover:text-rose-700">
+        {batch.courseTitle}
+      </Link>
+      <p className="text-xs text-charcoal-500">
+        {batch.name} · {formatDate(batch.startDate)} – {formatDate(batch.endDate)}
+        {batch.courseCompleted ? ' · Course completed' : ''}
+      </p>
+    </div>
+    {batch.recordingLink ? (
+      <a href={batch.recordingLink} target="_blank" rel="noopener noreferrer" className={buttonClasses('outline', 'sm', 'gap-1.5')}>
+        <PlayCircle className="h-4 w-4" /> Recording
+      </a>
+    ) : null}
+  </li>
+);
+
+/**
+ * The student's batches for the dashboard and profile: upcoming and live batches as full
+ * cards (with the class link), finished ones in a compact "Completed" list. Only batches of
+ * courses the student actually bought (or was granted) are returned by the API, so a student
+ * without a purchase sees the empty state.
+ */
+export const MyBatchesSection = ({ title = 'My batches' }: { title?: string }) => {
+  const batches = useMyBatches();
+  if (batches.isLoading || batches.error) return null;
+  const list = batches.data ?? [];
+  const current = list
+    .filter((b) => b.phase !== 'completed')
+    // Live first, then the soonest upcoming.
+    .sort((a, b) => (a.phase === b.phase ? a.startDate.localeCompare(b.startDate) : a.phase === 'live' ? -1 : 1));
+  const completed = list.filter((b) => b.phase === 'completed');
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-2xl font-semibold">{title}</h2>
+        {current.length > 0 ? (
+          <Link to="/student/live-classes" className="text-sm font-semibold text-rose-700 hover:underline">
+            Live classes
+          </Link>
+        ) : null}
+      </div>
+      {current.length > 0 ? (
+        <div className="space-y-3">
+          {current.map((b) => (
+            <BatchRow key={b.id} batch={b} showCourse />
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="No upcoming or live batches"
+          description={completed.length > 0 ? 'All your batches are finished. Enroll in a new course to join its next batch.' : 'Buy a course and you are placed in its next batch automatically. It will show up here.'}
+          action={<LinkButton to="/courses" size="sm">Browse courses</LinkButton>}
+          compact
+        />
+      )}
+      {completed.length > 0 ? (
+        <div>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-charcoal-500">Completed ({completed.length})</h3>
+          <ul className="card divide-y divide-ivory-200">
+            {completed.map((b) => (
+              <CompletedBatchRow key={b.id} batch={b} />
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
   );
 };

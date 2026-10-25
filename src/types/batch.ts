@@ -105,6 +105,12 @@ export interface BatchUpsertRequest {
 }
 
 /**
+ * upcoming: starts in the future. live: running now. completed: ended, closed, or finished by the
+ * student. GET /student/batches?phase= also accepts "current" (upcoming + live).
+ */
+export type StudentBatchPhase = 'upcoming' | 'live' | 'completed';
+
+/**
  * A batch the signed-in student is a verified member of (GET /student/batches).
  * The backend only returns batches for an active, paid (or admin-granted) enrollment.
  */
@@ -114,6 +120,11 @@ export interface StudentBatch {
   name: string;
   courseId: string;
   courseTitle: string;
+  courseSlug: string;
+  /** Where the batch stands for this student; "completed" also covers a finished course. */
+  phase: StudentBatchPhase;
+  /** The student's enrollment in this course is marked completed. */
+  courseCompleted: boolean;
   trainerName: string | null;
   startDate: ISODateString;
   endDate: ISODateString;

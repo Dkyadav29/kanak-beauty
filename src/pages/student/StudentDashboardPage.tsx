@@ -5,6 +5,7 @@ import { useStudentDashboard } from '@/hooks/useStudent';
 import { formatDate } from '@/lib/utils';
 import { LiveClassCard } from '@/components/shared/LiveClassCard';
 import { CourseProgressCard } from '@/components/shared/CourseProgressCard';
+import { MyBatchesSection } from '@/components/shared/BatchAccessCard';
 import { Avatar, DashboardStatCard, EmptyState, ErrorState, ImageWithFallback, LinkButton, LoadingSkeleton, ProgressBar, StatusBadge } from '@/components/ui';
 
 const greeting = () => {
@@ -78,6 +79,9 @@ const StudentDashboardPage = () => {
           Get my referral link <ArrowRight className="h-4 w-4" />
         </span>
       </Link>
+
+      {/* Batches: upcoming / live, then completed */}
+      <MyBatchesSection />
 
       <div className="grid gap-8 xl:grid-cols-[1.5fr_1fr]">
         {/* My courses */}

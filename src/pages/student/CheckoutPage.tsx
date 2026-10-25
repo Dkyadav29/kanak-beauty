@@ -54,7 +54,9 @@ const CheckoutPage = () => {
   if (course.isLoading) return <LoadingSkeleton variant="page" />;
   if (course.error || !course.data) return <ErrorState error={course.error} onRetry={() => void course.refetch()} />;
   const c = course.data;
-  const alreadyEnrolled = enrollments.data?.some((e) => e.courseId === c.id && e.enrollment.accessStatus === 'active');
+  const activeEnrollment = enrollments.data?.find((e) => e.courseId === c.id && e.enrollment.accessStatus === 'active');
+  const alreadyEnrolled = !!activeEnrollment;
+  const alreadyCompleted = !!activeEnrollment?.isCompleted;
 
   const start = async () => {
     setError(null);
@@ -139,10 +141,10 @@ const CheckoutPage = () => {
           {alreadyEnrolled ? (
             <div className="card p-6">
               <InlineAlert tone="success" className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4" /> You already have access to this course.
+                <CheckCircle2 className="h-4 w-4" /> {alreadyCompleted ? 'You have already completed this course. No need to buy it again.' : 'You already have access to this course.'}
               </InlineAlert>
               <LinkButton to={`/student/courses/${c.id}/learn`} className="mt-4">
-                Continue learning
+                {alreadyCompleted ? 'Revisit course' : 'Continue learning'}
               </LinkButton>
             </div>
           ) : status === 'paid' ? (
