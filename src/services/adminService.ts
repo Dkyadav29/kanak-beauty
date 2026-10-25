@@ -32,6 +32,8 @@ import type {
   ReferralAdminStats,
   ReferralFilters,
   ReferralProgramConfig,
+  CourseReferralSettingInput,
+  CourseReferralTerms,
   StudentDetailAdminView,
   StudentDirectoryRow,
   StudentFilters,
@@ -180,6 +182,10 @@ export const adminService = {
   referralConfig: async () => (await apiClient.get<ReferralProgramConfig>('/admin/referrals/config')).data,
   updateReferralConfig: async (payload: Omit<ReferralProgramConfig, 'currency'>) =>
     (await apiClient.put<ReferralProgramConfig>('/admin/referrals/config', payload)).data,
+  courseReferralRules: async () => (await apiClient.get<CourseReferralTerms[]>('/admin/referrals/courses')).data,
+  setCourseReferralRules: async (courseId: string, payload: CourseReferralSettingInput) =>
+    (await apiClient.put<CourseReferralTerms>(`/admin/referrals/courses/${courseId}`, payload)).data,
+  resetCourseReferralRules: async (courseId: string) => (await apiClient.delete<CourseReferralTerms>(`/admin/referrals/courses/${courseId}`)).data,
 
   // home page hero slider
   heroSlides: async () => (await apiClient.get<AdminHeroSlide[]>('/admin/hero-slides')).data,

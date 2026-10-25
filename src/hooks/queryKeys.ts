@@ -51,6 +51,7 @@ export const queryKeys = {
     referrals: (filters: object = {}) => ['admin', 'referrals', filters] as const,
     referralStats: ['admin', 'referrals', 'stats'] as const,
     referralConfig: ['admin', 'referrals', 'config'] as const,
+    referralCourses: ['admin', 'referrals', 'courses'] as const,
     heroSlides: ['admin', 'hero-slides'] as const,
   },
 };

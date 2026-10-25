@@ -18,6 +18,7 @@ import type {
   PaymentFilters,
   ReferralFilters,
   ReferralProgramConfig,
+  CourseReferralSettingInput,
   StudentFilters,
   TrainerUpsertRequest,
 } from '@/types';
@@ -175,8 +176,21 @@ export const useUpdateReferralConfig = () => {
   const invalidate = useInvalidateAdmin();
   return useMutation({
     mutationFn: (p: Omit<ReferralProgramConfig, 'currency'>) => adminService.updateReferralConfig(p),
-    onSuccess: () => invalidate(queryKeys.admin.referralConfig, queryKeys.admin.referralStats),
+    // Courses without their own rules follow the defaults, so their rows change too.
+    onSuccess: () => invalidate(queryKeys.admin.referralConfig, queryKeys.admin.referralStats, queryKeys.admin.referralCourses),
   });
+};
+export const useCourseReferralRules = () => useQuery({ queryKey: queryKeys.admin.referralCourses, queryFn: adminService.courseReferralRules });
+export const useCourseReferralMutations = () => {
+  const invalidate = useInvalidateAdmin();
+  const done = () => invalidate(queryKeys.admin.referralCourses);
+  return {
+    save: useMutation({
+      mutationFn: ({ courseId, payload }: { courseId: string; payload: CourseReferralSettingInput }) => adminService.setCourseReferralRules(courseId, payload),
+      onSuccess: done,
+    }),
+    reset: useMutation({ mutationFn: (courseId: string) => adminService.resetCourseReferralRules(courseId), onSuccess: done }),
+  };
 };
 
 // audit

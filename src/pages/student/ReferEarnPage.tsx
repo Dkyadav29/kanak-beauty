@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Check, Copy, Gift, Link2, MessageCircle, Share2, Sparkles, UserPlus, Wallet } from 'lucide-react';
 import { useReferralSummary } from '@/hooks/useStudent';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
-import type { Referral, ReferralReward } from '@/types';
+import type { CourseReferralTerms, Referral, ReferralReward } from '@/types';
 import { Badge, Button, Card, CardBody, CardHeader, DashboardStatCard, DataTable, ErrorState, InlineAlert, LoadingSkeleton, PageHeader, StatusBadge, Tabs, useToast, type Column } from '@/components/ui';
 
 const ReferEarnPage = () => {
@@ -15,6 +16,12 @@ const ReferEarnPage = () => {
   if (summary.error || !summary.data) return <ErrorState error={summary.error} onRetry={() => void summary.refetch()} />;
   const s = summary.data;
   const cur = s.program.currency;
+  // Rules can differ per course; headline the best offer and list every course below.
+  const courses = s.courses ?? [];
+  const bestReward = courses.reduce((max, c) => Math.max(max, c.referrerRewardAmount), 0);
+  const bestDiscount = courses.reduce((max, c) => Math.max(max, c.refereeDiscountAmount), 0);
+  const varies = courses.some((c) => c.referrerRewardAmount !== bestReward || c.refereeDiscountAmount !== bestDiscount);
+  const upTo = varies ? 'up to ' : '';
 
   const copy = async (text: string, what: 'code' | 'link') => {
     try {
@@ -26,7 +33,7 @@ const ReferEarnPage = () => {
     }
   };
 
-  const shareText = `Join me at Kanak Beauty Service! Use my referral code ${s.referralCode} and get ${formatCurrency(s.program.refereeDiscountAmount, cur)} off your first course: ${s.referralLink}`;
+  const shareText = `Join me at Kanak Beauty Service! Use my referral code ${s.referralCode} and get ${upTo}${formatCurrency(bestDiscount, cur)} off your first course: ${s.referralLink}`;
   const share = async () => {
     try {
       if (navigator.share) await navigator.share({ title: 'Kanak Beauty Service', text: shareText, url: s.referralLink });
@@ -53,6 +60,35 @@ const ReferEarnPage = () => {
     { key: 'reward', header: 'Reward', align: 'right', render: (r) => (r.rewardAmount ? <span className="font-semibold text-emerald-700">+{formatCurrency(r.rewardAmount, cur)}</span> : '—') },
   ];
 
+  const courseColumns: Column<CourseReferralTerms>[] = [
+    {
+      key: 'course',
+      header: 'Course',
+      render: (c) => (
+        <Link to={`/courses/${c.courseSlug}`} className="font-medium hover:text-rose-700">
+          {c.courseTitle}
+        </Link>
+      ),
+    },
+    { key: 'price', header: 'Price', render: (c) => formatCurrency(c.price, c.currency), hideBelow: 'md' },
+    {
+      key: 'discount',
+      header: 'Friend saves',
+      render: (c) => (
+        <span>
+          {formatCurrency(c.refereeDiscountAmount, c.currency)}
+          {c.refereeDiscountType === 'percent' ? <span className="text-xs text-charcoal-500"> ({c.refereeDiscountValue}%)</span> : null}
+        </span>
+      ),
+    },
+    {
+      key: 'reward',
+      header: 'You earn',
+      align: 'right',
+      render: (c) => <span className="font-semibold text-emerald-700">+{formatCurrency(c.referrerRewardAmount, c.currency)}</span>,
+    },
+  ];
+
   const rewardColumns: Column<ReferralReward>[] = [
     { key: 'date', header: 'Date', render: (r) => formatDateTime(r.createdAt) },
     { key: 'note', header: 'Details', render: (r) => <span className="text-charcoal-700">{r.note}</span> },
@@ -72,10 +108,14 @@ const ReferEarnPage = () => {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-300">Your invitation</p>
             <h2 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">
-              Give {formatCurrency(s.program.refereeDiscountAmount, cur)}, get {formatCurrency(s.program.referrerRewardAmount, cur)}.
+              Give {upTo}
+              {formatCurrency(bestDiscount, cur)}, get {upTo}
+              {formatCurrency(bestReward, cur)}.
             </h2>
             <p className="mt-2 max-w-lg text-sm text-white/80">
-              Friends who sign up with your code get {formatCurrency(s.program.refereeDiscountAmount, cur)} off their first course. When their payment is confirmed, {formatCurrency(s.program.referrerRewardAmount, cur)} is credited to your wallet to use on your next course.
+              Friends who sign up with your code get {upTo}
+              {formatCurrency(bestDiscount, cur)} off their first course. When their payment is confirmed, you earn {upTo}
+              {formatCurrency(bestReward, cur)} in wallet credit to use on your next course. The exact amounts depend on the course they choose; see the list below.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-[auto_1fr]">
               <div className="rounded-2xl bg-white/10 p-4 backdrop-blur">
@@ -114,8 +154,8 @@ const ReferEarnPage = () => {
           <ol className="grid gap-3 text-sm">
             {[
               { icon: Share2, title: 'Share your code or link', text: 'Send it to friends who want to start a beauty career.' },
-              { icon: UserPlus, title: 'They sign up and save', text: `Your friend enters the code at registration and gets ${formatCurrency(s.program.refereeDiscountAmount, cur)} off their first course.` },
-              { icon: Wallet, title: 'You earn wallet credit', text: `Once their payment is confirmed, ${formatCurrency(s.program.referrerRewardAmount, cur)} lands in your wallet. Up to ${formatCurrency(s.program.maxCreditPerOrder, cur)} can be applied per order.` },
+              { icon: UserPlus, title: 'They sign up and save', text: `Your friend enters the code at registration and gets ${upTo}${formatCurrency(bestDiscount, cur)} off their first course.` },
+              { icon: Wallet, title: 'You earn wallet credit', text: `Once their payment is confirmed, ${upTo}${formatCurrency(bestReward, cur)} lands in your wallet, depending on the course. Use it at checkout on your next course.` },
             ].map((step, i) => (
               <li key={step.title} className="flex gap-3 rounded-2xl bg-white/10 p-4 backdrop-blur">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-400 text-charcoal-900">
@@ -139,6 +179,22 @@ const ReferEarnPage = () => {
         <DashboardStatCard label="Total earned" value={formatCurrency(s.stats.totalEarned, cur)} icon={<Gift className="h-5 w-5" />} tone="gold" />
         <DashboardStatCard label="Wallet balance" value={formatCurrency(s.stats.walletBalance, cur)} icon={<Wallet className="h-5 w-5" />} tone="info" hint="Apply it at checkout" />
       </section>
+
+      {courses.length > 0 ? (
+        <Card>
+          <CardHeader title="What you earn per course" description="Amounts at today's prices. A friend's discount applies to their first course purchase only." />
+          <CardBody className="p-0 sm:p-0">
+            <DataTable
+              className="rounded-none border-0 shadow-none"
+              columns={courseColumns}
+              rows={courses}
+              rowKey={(c) => c.courseId}
+              emptyTitle="No courses"
+              caption="Refer & Earn by course"
+            />
+          </CardBody>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader
@@ -180,7 +236,7 @@ const ReferEarnPage = () => {
       </Card>
 
       <p className="text-xs text-charcoal-500">
-        Programme terms: rewards apply to a friend's first confirmed course payment only. Self-referrals and duplicate accounts are not eligible. Credit has no cash value and is applied at checkout up to the per-order limit.
+        Programme terms: rewards apply to a friend's first confirmed course payment only, at the rates for the course they buy. Self-referrals and duplicate accounts are not eligible. Credit has no cash value and is applied at checkout up to each course's limit.
       </p>
     </div>
   );

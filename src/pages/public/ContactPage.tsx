@@ -35,8 +35,8 @@ const ContactPage = () => {
         <SectionHeading eyebrow="Contact us" title="Talk to an admissions advisor" description="Have a question about a course, schedule or payment? Send us a message and the academy team will get back to you." />
         <ul className="mt-8 space-y-4 text-sm text-charcoal-700">
           {[
-            { icon: Mail, label: 'Email', value: 'hello@kanakacademy.example' },
-            { icon: Phone, label: 'Phone / WhatsApp', value: '+91 00000 00000' },
+            { icon: Mail, label: 'Email', value: 'admin@kanakbeautyservice.com' },
+            { icon: Phone, label: 'Phone / WhatsApp', value: '+91 62072 83072' },
             { icon: MapPin, label: 'Studio', value: 'Academy address to be configured' },
             { icon: Clock3, label: 'Hours', value: 'Mon to Sat, 10:00 to 19:00' },
           ].map((i) => (

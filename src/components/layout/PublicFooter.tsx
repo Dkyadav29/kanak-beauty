@@ -43,10 +43,10 @@ export const PublicFooter = () => (
         </p>
         <ul className="mt-6 space-y-2.5 text-sm text-charcoal-700">
           <li className="flex items-center gap-2.5">
-            <Mail className="h-4 w-4 text-rose-600" /> hello@kanakacademy.example
+            <Mail className="h-4 w-4 text-rose-600" /> admin@kanakbeautyservice.com
           </li>
           <li className="flex items-center gap-2.5">
-            <Phone className="h-4 w-4 text-rose-600" /> +91 00000 00000
+            <Phone className="h-4 w-4 text-rose-600" /> +91 62072 83072
           </li>
           <li className="flex items-start gap-2.5">
             <MapPin className="mt-0.5 h-4 w-4 text-rose-600" /> Academy address to be configured

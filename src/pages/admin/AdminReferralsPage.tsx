@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Gift, Percent, Save, UserPlus, Wallet } from 'lucide-react';
-import { useAdminReferrals, useReferralConfig, useReferralStats, useUpdateReferralConfig } from '@/hooks/useAdmin';
-import { getErrorMessage } from '@/lib/api/errors';
+import { Gift, Pencil, Percent, RotateCcw, Save, UserPlus, Wallet } from 'lucide-react';
+import { useAdminReferrals, useCourseReferralMutations, useCourseReferralRules, useReferralConfig, useReferralStats, useUpdateReferralConfig } from '@/hooks/useAdmin';
+import { ApiError, getErrorMessage } from '@/lib/api/errors';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
-import type { ReferralAdminRow, ReferralStatus } from '@/types';
-import { Button, Card, CardBody, CardHeader, Checkbox, DashboardStatCard, DataTable, ErrorState, FormField, InlineAlert, Input, LoadingSkeleton, PageHeader, SearchAndFilters, StatusBadge, useToast, type Column } from '@/components/ui';
+import type { CourseReferralTerms, ReferralAdminRow, ReferralStatus, ReferralValueType } from '@/types';
+import { Badge, Button, Card, CardBody, CardHeader, Checkbox, DashboardStatCard, DataTable, Dialog, ErrorState, FormField, InlineAlert, Input, LoadingSkeleton, PageHeader, SearchAndFilters, Select, StatusBadge, useToast, type Column } from '@/components/ui';
 
 const configSchema = z.object({
   enabled: z.boolean(),
@@ -19,6 +19,225 @@ const configSchema = z.object({
 type ConfigValues = z.infer<typeof configSchema>;
 
 const PAGE_SIZE = 10;
+
+/** "20% (₹1,999.80)" or "₹500". */
+const ruleLabel = (type: ReferralValueType, value: number, amount: number, currency: string) =>
+  type === 'percent' ? `${value}% (${formatCurrency(amount, currency)})` : formatCurrency(value, currency);
+
+const ruleValue = (label: string) =>
+  z.coerce.number({ invalid_type_error: 'Enter a number' }).min(0, `${label} cannot be negative`);
+
+const courseRuleSchema = z
+  .object({
+    enabled: z.boolean(),
+    referrerRewardType: z.enum(['fixed', 'percent']),
+    referrerRewardValue: ruleValue('Reward'),
+    refereeDiscountType: z.enum(['fixed', 'percent']),
+    refereeDiscountValue: ruleValue('Discount'),
+    maxCreditPerOrder: z.coerce.number().int('Whole amount').min(0).max(100_000),
+  })
+  .superRefine((v, ctx) => {
+    for (const kind of ['referrerReward', 'refereeDiscount'] as const) {
+      const value = v[`${kind}Value`];
+      const path = [`${kind}Value`];
+      if (v[`${kind}Type`] === 'percent') {
+        if (value > 100) ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: 'A percentage must be 0 to 100' });
+      } else if (!Number.isInteger(value) || value > 100_000) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: 'Whole amount, 0 to 100000' });
+      }
+    }
+  });
+type CourseRuleValues = z.infer<typeof courseRuleSchema>;
+const COURSE_RULE_FIELDS: Array<keyof CourseRuleValues> = ['enabled', 'referrerRewardType', 'referrerRewardValue', 'refereeDiscountType', 'refereeDiscountValue', 'maxCreditPerOrder'];
+
+const CourseRuleDialog = ({ row, onClose }: { row: CourseReferralTerms | null; onClose: () => void }) => {
+  const { save } = useCourseReferralMutations();
+  const toast = useToast();
+  const [serverError, setServerError] = useState<string | null>(null);
+  const form = useForm<CourseRuleValues>({ resolver: zodResolver(courseRuleSchema) });
+  const { register, watch, formState } = form;
+
+  useEffect(() => {
+    if (!row) return;
+    setServerError(null);
+    form.reset({
+      enabled: row.enabled,
+      referrerRewardType: row.referrerRewardType,
+      referrerRewardValue: row.referrerRewardValue,
+      refereeDiscountType: row.refereeDiscountType,
+      refereeDiscountValue: row.refereeDiscountValue,
+      maxCreditPerOrder: row.maxCreditPerOrder,
+    });
+  }, [row, form]);
+
+  const submit = async (values: CourseRuleValues) => {
+    if (!row) return;
+    setServerError(null);
+    try {
+      await save.mutateAsync({ courseId: row.courseId, payload: values });
+      toast.success('Course rules saved', row.courseTitle);
+      onClose();
+    } catch (e) {
+      if (e instanceof ApiError && e.details) {
+        Object.entries(e.details).forEach(([field, msgs]) => {
+          if ((COURSE_RULE_FIELDS as string[]).includes(field)) form.setError(field as keyof CourseRuleValues, { message: msgs[0] });
+        });
+      }
+      setServerError(getErrorMessage(e));
+    }
+  };
+
+  const cur = row?.currency ?? 'INR';
+  const unit = (type: ReferralValueType) => (type === 'percent' ? '%' : cur);
+  const rewardType = watch('referrerRewardType');
+  const discountType = watch('refereeDiscountType');
+  const formId = 'course-referral-form';
+
+  return (
+    <Dialog
+      open={!!row}
+      onClose={onClose}
+      size="lg"
+      title={row ? `Refer & Earn · ${row.courseTitle}` : ''}
+      description={row ? `Course price ${formatCurrency(row.price, cur)}. A percentage discount is taken off this price; a percentage reward is a share of what the friend pays after the discount.` : undefined}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={save.isPending}>
+            Cancel
+          </Button>
+          <Button type="submit" form={formId} loading={save.isPending} leftIcon={<Save className="h-4 w-4" />}>
+            Save course rules
+          </Button>
+        </>
+      }
+    >
+      {serverError ? (
+        <InlineAlert tone="danger" className="mb-4">
+          {serverError}
+        </InlineAlert>
+      ) : null}
+      <form id={formId} onSubmit={form.handleSubmit(submit)} className="grid gap-4 sm:grid-cols-2" noValidate>
+        <Checkbox
+          id="cr-enabled"
+          className="sm:col-span-2"
+          label="Refer & Earn applies to this course"
+          description="When off: no friend discount, no referrer reward and no wallet credit on this course."
+          {...register('enabled')}
+        />
+        <FormField label="Friend's discount type" htmlFor="cr-dtype">
+          <Select id="cr-dtype" {...register('refereeDiscountType')}>
+            <option value="fixed">Fixed amount</option>
+            <option value="percent">Percent of price</option>
+          </Select>
+        </FormField>
+        <FormField label={`Friend's first-purchase discount (${unit(discountType)})`} htmlFor="cr-dvalue" error={formState.errors.refereeDiscountValue?.message}>
+          <Input id="cr-dvalue" type="number" min={0} step={discountType === 'percent' ? 0.5 : 50} invalid={!!formState.errors.refereeDiscountValue} {...register('refereeDiscountValue')} />
+        </FormField>
+        <FormField label="Referrer reward type" htmlFor="cr-rtype">
+          <Select id="cr-rtype" {...register('referrerRewardType')}>
+            <option value="fixed">Fixed amount</option>
+            <option value="percent">Percent of amount paid</option>
+          </Select>
+        </FormField>
+        <FormField label={`Referrer reward (${unit(rewardType)})`} htmlFor="cr-rvalue" error={formState.errors.referrerRewardValue?.message}>
+          <Input id="cr-rvalue" type="number" min={0} step={rewardType === 'percent' ? 0.5 : 50} invalid={!!formState.errors.referrerRewardValue} {...register('referrerRewardValue')} />
+        </FormField>
+        <FormField label={`Max wallet credit on this course (${cur})`} htmlFor="cr-credit" error={formState.errors.maxCreditPerOrder?.message} hint="0 = wallet credit cannot be used on this course." className="sm:col-span-2">
+          <Input id="cr-credit" type="number" min={0} step={100} invalid={!!formState.errors.maxCreditPerOrder} {...register('maxCreditPerOrder')} />
+        </FormField>
+      </form>
+    </Dialog>
+  );
+};
+
+const CourseRulesCard = () => {
+  const rows = useCourseReferralRules();
+  const { reset } = useCourseReferralMutations();
+  const toast = useToast();
+  const [editing, setEditing] = useState<CourseReferralTerms | null>(null);
+
+  const resetRow = async (r: CourseReferralTerms) => {
+    try {
+      await reset.mutateAsync(r.courseId);
+      toast.success('Course uses the programme defaults again', r.courseTitle);
+    } catch (e) {
+      toast.error('Could not reset the course', getErrorMessage(e));
+    }
+  };
+
+  const columns: Column<CourseReferralTerms>[] = [
+    {
+      key: 'course',
+      header: 'Course',
+      render: (r) => (
+        <div>
+          <p className="font-medium text-charcoal-900">{r.courseTitle}</p>
+          <p className="text-xs text-charcoal-500">
+            {formatCurrency(r.price, r.currency)}
+            {r.courseStatus !== 'published' ? ` · ${r.courseStatus}` : ''}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: 'rules',
+      header: 'Rules',
+      render: (r) => (
+        <div className="flex flex-wrap gap-1">
+          <Badge tone={r.enabled ? 'success' : 'neutral'} dot>
+            {r.enabled ? 'On' : 'Off'}
+          </Badge>
+          <Badge tone={r.custom ? 'gold' : 'info'}>{r.custom ? 'Custom' : 'Default'}</Badge>
+        </div>
+      ),
+    },
+    { key: 'discount', header: 'Friend saves', render: (r) => (r.enabled ? ruleLabel(r.refereeDiscountType, r.refereeDiscountValue, r.refereeDiscountAmount, r.currency) : '—'), hideBelow: 'sm' },
+    { key: 'reward', header: 'Referrer earns', render: (r) => (r.enabled ? ruleLabel(r.referrerRewardType, r.referrerRewardValue, r.referrerRewardAmount, r.currency) : '—'), hideBelow: 'md' },
+    { key: 'credit', header: 'Max credit', render: (r) => (r.enabled ? formatCurrency(r.maxCreditPerOrder, r.currency) : '—'), hideBelow: 'lg' },
+    {
+      key: 'actions',
+      header: <span className="sr-only">Actions</span>,
+      align: 'right',
+      render: (r) => (
+        <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <Button size="sm" variant="outline" leftIcon={<Pencil className="h-4 w-4" />} onClick={() => setEditing(r)}>
+            Edit
+          </Button>
+          {r.custom ? (
+            <Button size="icon" variant="ghost" aria-label={`Reset ${r.courseTitle} to defaults`} disabled={reset.isPending} onClick={() => void resetRow(r)}>
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          ) : null}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <Card>
+      <CardHeader
+        title="Course rules"
+        description="Set the friend's discount, the referrer's reward and the wallet limit per course, as a fixed amount or a percentage. Courses marked Default follow the programme settings."
+      />
+      <CardBody className="p-0 sm:p-0">
+        <DataTable
+          className="rounded-none border-0 shadow-none"
+          columns={columns}
+          rows={rows.data}
+          rowKey={(r) => r.courseId}
+          isLoading={rows.isLoading}
+          error={rows.error}
+          onRetry={() => void rows.refetch()}
+          onRowClick={(r) => setEditing(r)}
+          emptyTitle="No courses yet"
+          emptyDescription="Create a course first; its Refer & Earn rules can then be set here."
+          caption="Refer & Earn rules per course"
+        />
+      </CardBody>
+      <CourseRuleDialog row={editing} onClose={() => setEditing(null)} />
+    </Card>
+  );
+};
 
 const AdminReferralsPage = () => {
   const [search, setSearch] = useState('');
@@ -130,7 +349,7 @@ const AdminReferralsPage = () => {
         </div>
 
         <Card className="self-start">
-          <CardHeader title="Programme settings" description="Changes apply to new sign-ups and new orders. Every change is audited." />
+          <CardHeader title="Programme settings" description="The master switch, plus the defaults for courses without their own rules. Changes apply to new orders and are audited." />
           <CardBody>
             {config.isLoading ? (
               <LoadingSkeleton variant="list" count={3} />
@@ -138,7 +357,8 @@ const AdminReferralsPage = () => {
               <ErrorState error={config.error} onRetry={() => void config.refetch()} compact />
             ) : (
               <form onSubmit={form.handleSubmit(save)} className="space-y-4" noValidate>
-                <Checkbox id="enabled" label="Programme enabled" description="When off, codes are rejected and no new rewards are credited." {...form.register('enabled')} />
+                <Checkbox id="enabled" label="Programme enabled" description="When off, codes are rejected and no new rewards are credited on any course." {...form.register('enabled')} />
+                <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">Defaults for courses without their own rules</p>
                 <FormField label={`Referrer reward (${cur})`} htmlFor="referrerRewardAmount" error={form.formState.errors.referrerRewardAmount?.message} hint="Credited to the referrer's wallet on the friend's first confirmed payment.">
                   <Input id="referrerRewardAmount" type="number" min={0} step={50} {...form.register('referrerRewardAmount')} />
                 </FormField>
@@ -157,6 +377,8 @@ const AdminReferralsPage = () => {
           </CardBody>
         </Card>
       </div>
+
+      <CourseRulesCard />
     </div>
   );
 };

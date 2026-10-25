@@ -103,7 +103,9 @@ const RegisterPage = () => {
           hint={
             referralCode && referral.data?.valid ? (
               <span className="inline-flex items-center gap-1 text-emerald-700">
-                <Gift className="h-3.5 w-3.5" /> Invited by {referral.data.referrerFirstName}: you get {formatCurrency(referral.data.refereeDiscountAmount, referral.data.currency)} off your first course.
+                {/* Discounts are set per course, so the exact amount is shown at checkout. */}
+                <Gift className="h-3.5 w-3.5" /> Invited by {referral.data.referrerFirstName}: you get a welcome discount on your first course
+                {referral.data.refereeDiscountAmount > 0 ? ` (usually ${formatCurrency(referral.data.refereeDiscountAmount, referral.data.currency)})` : ''}. The exact amount is shown at checkout.
               </span>
             ) : (
               'Have a friend at Kanak? Enter their Refer & Earn code.'
