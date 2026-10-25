@@ -158,7 +158,7 @@ const CourseDetailsPage = () => {
             <div className="flex flex-wrap items-end justify-between gap-2">
               <h2 className="font-display text-3xl font-semibold text-charcoal-900">Curriculum</h2>
               <p className="text-sm text-charcoal-500">
-                {c.modules.length} modules · {lessons.length} lessons · {formatDuration(totalMinutes)}
+                {c.modules.length} days · {lessons.length} lessons · {formatDuration(totalMinutes)}
               </p>
             </div>
             <div className="mt-4 space-y-3">
@@ -168,7 +168,7 @@ const CourseDetailsPage = () => {
                   <div key={m.id} className="card overflow-hidden">
                     <button type="button" onClick={() => setOpenModule(open ? '' : m.id)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left" aria-expanded={open}>
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-rose-600">Module {m.order}</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-rose-600">Day {m.order}</p>
                         <h3 className="font-display text-xl font-semibold text-charcoal-900">{m.title}</h3>
                         <p className="text-sm text-charcoal-500">{m.description}</p>
                       </div>

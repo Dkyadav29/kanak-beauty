@@ -308,6 +308,7 @@ interface LessonDraft {
   durationMinutes: number;
   isRequired: boolean;
   summary: string;
+  videoUrl: string;
 }
 interface ModuleDraft {
   key: string;
@@ -320,6 +321,7 @@ interface ModuleDraft {
 let keySeq = 0;
 const nextKey = () => `k${Date.now().toString(36)}${(keySeq++).toString(36)}`;
 const LESSON_TYPES: LessonType[] = ['video', 'reading', 'live', 'assessment'];
+const isVideoUrlValid = (v: string) => !v.trim() || /^https:\/\/\S+$/i.test(v.trim());
 
 const fromCourse = (course: Course): ModuleDraft[] =>
   [...course.modules]
@@ -329,7 +331,7 @@ const fromCourse = (course: Course): ModuleDraft[] =>
       id: m.id,
       title: m.title,
       description: m.description,
-      lessons: [...m.lessons].sort((a, b) => a.order - b.order).map((l) => ({ key: l.id, id: l.id, title: l.title, type: l.type, durationMinutes: l.durationMinutes, isRequired: l.isRequired, summary: l.summary })),
+      lessons: [...m.lessons].sort((a, b) => a.order - b.order).map((l) => ({ key: l.id, id: l.id, title: l.title, type: l.type, durationMinutes: l.durationMinutes, isRequired: l.isRequired, summary: l.summary, videoUrl: l.videoUrl ?? '' })),
     }));
 
 const move = <T,>(list: T[], from: number, to: number): T[] => {
@@ -364,21 +366,21 @@ const CurriculumEditor = ({ course }: { course: Course }) => {
 
   const totalLessons = modules.reduce((n, m) => n + m.lessons.length, 0);
   const totalMinutes = modules.reduce((n, m) => n + m.lessons.reduce((s, l) => s + (l.durationMinutes || 0), 0), 0);
-  const invalid = modules.some((m) => m.title.trim().length < 2 || m.lessons.some((l) => l.title.trim().length < 2));
+  const invalid = modules.some((m) => m.title.trim().length < 2 || m.lessons.some((l) => l.title.trim().length < 2 || !isVideoUrlValid(l.videoUrl)));
 
   const save = async () => {
     const payload: CurriculumModuleInput[] = modules.map((m) => ({
       id: m.id,
       title: m.title.trim(),
       description: m.description.trim(),
-      lessons: m.lessons.map((l) => ({ id: l.id, title: l.title.trim(), type: l.type, durationMinutes: Math.max(1, Math.round(l.durationMinutes || 1)), isRequired: l.isRequired, summary: l.summary.trim() })),
+      lessons: m.lessons.map((l) => ({ id: l.id, title: l.title.trim(), type: l.type, durationMinutes: Math.max(1, Math.round(l.durationMinutes || 1)), isRequired: l.isRequired, summary: l.summary.trim(), videoUrl: l.videoUrl.trim() })),
     }));
     try {
       const updated = await curriculum.mutateAsync({ id: course.id, modules: payload });
       syncedAt.current = updated.updatedAt;
       setModules(fromCourse(updated));
       setDirty(false);
-      toast.success('Curriculum saved', `${updated.modules.length} module${updated.modules.length === 1 ? '' : 's'} saved.`);
+      toast.success('Curriculum saved', `${updated.modules.length} day${updated.modules.length === 1 ? '' : 's'} saved.`);
     } catch (e) {
       toast.error('Could not save curriculum', getErrorMessage(e));
     }
@@ -388,37 +390,37 @@ const CurriculumEditor = ({ course }: { course: Course }) => {
     <Card>
       <CardHeader
         title="Curriculum"
-        description={`${modules.length} module${modules.length === 1 ? '' : 's'} · ${totalLessons} lesson${totalLessons === 1 ? '' : 's'} · ${formatDuration(totalMinutes)}`}
+        description={`${modules.length} day${modules.length === 1 ? '' : 's'} · ${totalLessons} lesson${totalLessons === 1 ? '' : 's'} · ${formatDuration(totalMinutes)}`}
         action={
           <Button variant="secondary" size="sm" onClick={() => edit((ms) => [...ms, { key: nextKey(), title: '', description: '', lessons: [] }])} leftIcon={<Plus className="h-4 w-4" />}>
-            Add module
+            Add day
           </Button>
         }
       />
       <CardBody className="space-y-5">
         {modules.length === 0 ? (
-          <EmptyState title="No modules yet" description="Add a module, then add lessons inside it. A course needs at least one lesson before it can be published." compact action={<Button onClick={() => edit((ms) => [...ms, { key: nextKey(), title: 'Module 1', description: '', lessons: [] }])}>Add first module</Button>} />
+          <EmptyState title="No days yet" description="Add a day, then add that day's lessons inside it. A course needs at least one lesson before it can be published." compact action={<Button onClick={() => edit((ms) => [...ms, { key: nextKey(), title: 'Day 1', description: '', lessons: [] }])}>Add first day</Button>} />
         ) : null}
         {modules.map((m, mi) => (
           <div key={m.key} className="rounded-2xl border border-ivory-300 bg-ivory-50/60">
             <div className="flex flex-col gap-4 border-b border-ivory-200 p-4 sm:flex-row sm:items-start">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-600 font-display text-sm font-semibold text-white">{mi + 1}</span>
               <div className="grid flex-1 gap-3 sm:grid-cols-2">
-                <FormField label="Module title" htmlFor={`${m.key}-title`} required error={m.title.trim().length > 0 && m.title.trim().length < 2 ? 'At least 2 characters' : undefined}>
+                <FormField label={`Day ${mi + 1} title`} htmlFor={`${m.key}-title`} required error={m.title.trim().length > 0 && m.title.trim().length < 2 ? 'At least 2 characters' : undefined}>
                   <Input id={`${m.key}-title`} value={m.title} onChange={(e) => updateModule(mi, { title: e.target.value })} placeholder="e.g. Foundations of skin prep" />
                 </FormField>
-                <FormField label="Module description" htmlFor={`${m.key}-desc`}>
+                <FormField label="Day description" htmlFor={`${m.key}-desc`}>
                   <Input id={`${m.key}-desc`} value={m.description} onChange={(e) => updateModule(mi, { description: e.target.value })} placeholder="Optional summary" />
                 </FormField>
               </div>
               <div className="flex shrink-0 items-center gap-1 self-end sm:self-start">
-                <Button variant="ghost" size="icon" aria-label="Move module up" disabled={mi === 0} onClick={() => edit((ms) => move(ms, mi, mi - 1))}>
+                <Button variant="ghost" size="icon" aria-label="Move day up" disabled={mi === 0} onClick={() => edit((ms) => move(ms, mi, mi - 1))}>
                   <ArrowUp className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" aria-label="Move module down" disabled={mi === modules.length - 1} onClick={() => edit((ms) => move(ms, mi, mi + 1))}>
                   <ArrowDown className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" aria-label="Remove module" className="text-red-600 hover:bg-red-50" onClick={() => edit((ms) => ms.filter((_, i) => i !== mi))}>
+                <Button variant="ghost" size="icon" aria-label="Remove day" className="text-red-600 hover:bg-red-50" onClick={() => edit((ms) => ms.filter((_, i) => i !== mi))}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -445,6 +447,17 @@ const CurriculumEditor = ({ course }: { course: Course }) => {
                   <FormField label="Summary" htmlFor={`${l.key}-sum`} className="sm:col-span-2 lg:col-span-4">
                     <Input id={`${l.key}-sum`} value={l.summary} onChange={(e) => updateLesson(mi, li, { summary: e.target.value })} placeholder="Optional" />
                   </FormField>
+                  {l.type === 'video' || l.videoUrl ? (
+                    <FormField
+                      label="Google Drive video link"
+                      htmlFor={`${l.key}-video`}
+                      className="sm:col-span-2 lg:col-span-12"
+                      error={isVideoUrlValid(l.videoUrl) ? undefined : 'Enter a valid https:// link'}
+                      hint='In Google Drive: Share → General access → "Anyone with the link" (Viewer). Only enrolled students see this link.'
+                    >
+                      <Input id={`${l.key}-video`} type="url" value={l.videoUrl} onChange={(e) => updateLesson(mi, li, { videoUrl: e.target.value })} placeholder="https://drive.google.com/file/d/…/view" />
+                    </FormField>
+                  ) : null}
                   <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2 lg:col-span-12">
                     <Checkbox id={`${l.key}-req`} label="Required for completion" checked={l.isRequired} onChange={(e) => updateLesson(mi, li, { isRequired: e.target.checked })} className="py-2" />
                     <div className="flex items-center gap-1">
@@ -464,7 +477,7 @@ const CurriculumEditor = ({ course }: { course: Course }) => {
               ))}
             </ul>
             <div className="p-4 pt-2">
-              <Button variant="outline" size="sm" onClick={() => updateModule(mi, { lessons: [...m.lessons, { key: nextKey(), title: '', type: 'video', durationMinutes: 15, isRequired: true, summary: '' }] })} leftIcon={<Plus className="h-4 w-4" />}>
+              <Button variant="outline" size="sm" onClick={() => updateModule(mi, { lessons: [...m.lessons, { key: nextKey(), title: '', type: 'video', durationMinutes: 15, isRequired: true, summary: '', videoUrl: '' }] })} leftIcon={<Plus className="h-4 w-4" />}>
                 Add lesson
               </Button>
             </div>

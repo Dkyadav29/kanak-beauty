@@ -50,6 +50,8 @@ export interface CurriculumModuleInput {
     durationMinutes: number;
     isRequired: boolean;
     summary: string;
+    /** Optional https link, e.g. a Google Drive share link. */
+    videoUrl?: string;
   }>;
 }
 

@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Award, CheckCircle2, ChevronLeft, ChevronRight, Circle, Download, FileText, Lock, MessageCircle, PlayCircle, Radio } from 'lucide-react';
+import { ArrowLeft, Award, CheckCircle2, ChevronLeft, ChevronRight, Circle, Download, ExternalLink, FileText, Lock, MessageCircle, PlayCircle, Radio } from 'lucide-react';
 import { BatchAccessCard } from '@/components/shared/BatchAccessCard';
 import { useCourseProgress, useStudentCourse, useStudentLiveSessions, useUpdateLessonProgress } from '@/hooks/useStudent';
 import { getErrorMessage } from '@/lib/api/errors';
 import { ApiError } from '@/lib/api/errors';
-import { cn, formatDuration } from '@/lib/utils';
+import { cn, driveEmbedUrl, formatDuration } from '@/lib/utils';
 import type { Lesson } from '@/types';
 import { LiveClassCard } from '@/components/shared/LiveClassCard';
-import { Badge, Button, ErrorState, InlineAlert, LinkButton, LoadingSkeleton, ProgressBar, useToast } from '@/components/ui';
+import { Badge, Button, buttonClasses, ErrorState, InlineAlert, LinkButton, LoadingSkeleton, ProgressBar, useToast } from '@/components/ui';
 import { ForbiddenPage } from '@/pages/ErrorPages';
 
 const typeIcon = (type: Lesson['type'], className = 'h-4 w-4') => {
@@ -64,6 +64,7 @@ const CourseLearningPage = () => {
   const prev = lessons[index - 1];
   const next = lessons[index + 1];
   const isDone = completedIds.has(current.id);
+  const embedUrl = current.type === 'video' ? driveEmbedUrl(current.videoUrl) : null;
   const courseSessions = (sessions.data ?? []).filter((s) => s.courseId === c.id).slice(0, 3);
 
   const toggleComplete = async () => {
@@ -81,11 +82,11 @@ const CourseLearningPage = () => {
   };
 
   const Sidebar = (
-    <nav aria-label="Course modules" className="space-y-5">
+    <nav aria-label="Course days" className="space-y-5">
       {c.modules.map((m) => (
         <div key={m.id}>
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
-            Module {m.order} · {m.title}
+            Day {m.order} · {m.title}
           </p>
           <ul className="space-y-1">
             {m.lessons.map((l) => {
@@ -150,7 +151,7 @@ const CourseLearningPage = () => {
         <aside className="card hidden max-h-[calc(100vh-8rem)] overflow-y-auto p-4 scrollbar-thin lg:sticky lg:top-24 lg:block">{Sidebar}</aside>
         <div className="lg:hidden">
           <Button variant="outline" className="w-full" onClick={() => setMobileSidebar((s) => !s)}>
-            {mobileSidebar ? 'Hide' : 'Show'} course modules
+            {mobileSidebar ? 'Hide' : 'Show'} course days
           </Button>
           {mobileSidebar ? <div className="card mt-3 p-4">{Sidebar}</div> : null}
         </div>
@@ -158,8 +159,14 @@ const CourseLearningPage = () => {
         <section className="space-y-6">
           <div className="card overflow-hidden">
             <div className="relative aspect-video bg-charcoal-900 text-white">
-              {current.type === 'video' ? (
-                <video key={current.id} controls className="h-full w-full" src="https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" poster={c.thumbnailUrl} onEnded={() => !isDone && void toggleComplete()} />
+              {current.type === 'video' && embedUrl ? (
+                <iframe key={current.id} src={embedUrl} title={current.title} className="h-full w-full border-0" allow="autoplay; fullscreen" allowFullScreen referrerPolicy="no-referrer" />
+              ) : current.type === 'video' ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10">{typeIcon('video', 'h-7 w-7')}</span>
+                  <p className="font-display text-2xl font-semibold">{current.title}</p>
+                  <p className="max-w-md text-sm text-white/70">{current.videoUrl ? 'This video opens in a new tab.' : "The video for this lesson hasn't been added yet. Please check back soon."}</p>
+                </div>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
                   <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10">{typeIcon(current.type, 'h-7 w-7')}</span>
@@ -191,6 +198,11 @@ const CourseLearningPage = () => {
                   </Button>
                 )}
               </div>
+              {current.videoUrl ? (
+                <a href={current.videoUrl} target="_blank" rel="noopener noreferrer" className={cn(buttonClasses('outline', 'sm'), 'mt-4 gap-2')}>
+                  <ExternalLink className="h-4 w-4" /> Open in Google Drive
+                </a>
+              ) : null}
               <p className="mt-4 leading-relaxed text-charcoal-700">{current.summary}</p>
               {current.type === 'reading' ? (
                 <div className="mt-4 rounded-2xl bg-ivory-100 p-5 text-sm leading-relaxed text-charcoal-700">

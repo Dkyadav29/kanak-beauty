@@ -29,6 +29,23 @@ export const formatDateTime = (iso: string | null | undefined) => {
 export const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
 
+/**
+ * Google Drive share link -> embeddable preview URL, e.g.
+ * https://drive.google.com/file/d/<id>/view?usp=sharing -> https://drive.google.com/file/d/<id>/preview.
+ * Returns null for links that are not Drive files (those open in a new tab instead).
+ */
+export const driveEmbedUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname !== 'drive.google.com') return null;
+    const id = u.pathname.match(/\/file\/d\/([\w-]+)/)?.[1] ?? u.searchParams.get('id');
+    return id ? `https://drive.google.com/file/d/${id}/preview` : null;
+  } catch {
+    return null;
+  }
+};
+
 /** Batch class time from API "HH:MM[:SS]" values, e.g. "6:00 PM – 8:00 PM". Null when either end is missing. */
 export const formatClassTime = (start: string | null | undefined, end: string | null | undefined) => {
   if (!start || !end) return null;

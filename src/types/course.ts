@@ -50,6 +50,8 @@ export interface Lesson {
   order: number;
   isRequired: boolean;
   summary: string;
+  /** Google Drive (or other https) video. Only present for admins and enrolled students, never on public pages. */
+  videoUrl?: string;
   materials: LearningMaterial[];
 }
 
