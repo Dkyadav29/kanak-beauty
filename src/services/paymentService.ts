@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api/client';
-import type { CreateOrderRequest, CreateOrderResponse, PaymentStatus } from '@/types';
+import type { CreateOrderRequest, CreateOrderResponse, PaymentStatus, PaymentTransaction, RazorpayVerifyRequest } from '@/types';
 
 export const paymentService = {
   /** Step 1: create a pending order on the backend. */
@@ -13,4 +13,11 @@ export const paymentService = {
    */
   completeSandboxCheckout: async (payload: { checkoutToken: string; outcome: 'success' | 'failure'; method: string }) =>
     (await apiClient.post<{ status: PaymentStatus }>('/payments/sandbox/complete', payload)).data,
+
+  /**
+   * Razorpay only (backend PAYMENT_GATEWAY=razorpay). Hands the checkout's signed result to
+   * the backend, which verifies it with Razorpay and grants course access when captured. The
+   * Razorpay webhook settles the same payment independently if this call never happens.
+   */
+  verifyRazorpay: async (payload: RazorpayVerifyRequest) => (await apiClient.post<PaymentTransaction>('/payments/razorpay/verify', payload)).data,
 };

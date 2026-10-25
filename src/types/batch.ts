@@ -12,9 +12,15 @@ export interface Batch {
   trainerId: string | null;
   startDate: ISODateString;
   endDate: ISODateString;
+  /** Daily class time, "HH:MM:SS". Null only on batches created before times were captured. */
+  startTime: string | null;
+  endTime: string | null;
   capacity: number;
   status: BatchStatus;
   scheduleNote: string;
+  /** Admin responses only. Students get links via StudentBatch, and only when verified. */
+  meetLink: string;
+  recordingLink: string;
   createdAt: ISODateString;
   updatedAt: ISODateString;
 }
@@ -86,9 +92,38 @@ export interface BatchUpsertRequest {
   trainerId: string;
   startDate: string;
   endDate: string;
+  /** "HH:MM" */
+  startTime: string;
+  endTime: string;
   capacity: number;
   scheduleNote: string;
+  /** Optional; must be a https://meet.google.com/... link. */
+  meetLink: string;
+  /** Optional https link to the session recording. */
+  recordingLink: string;
   status?: BatchStatus;
+}
+
+/**
+ * A batch the signed-in student is a verified member of (GET /student/batches).
+ * The backend only returns batches for an active, paid (or admin-granted) enrollment.
+ */
+export interface StudentBatch {
+  id: string;
+  code: string;
+  name: string;
+  courseId: string;
+  courseTitle: string;
+  trainerName: string | null;
+  startDate: ISODateString;
+  endDate: ISODateString;
+  startTime: string | null;
+  endTime: string | null;
+  scheduleNote: string;
+  status: BatchStatus;
+  /** Null when not set or once the batch has ended. */
+  meetLink: string | null;
+  recordingLink: string | null;
 }
 
 export interface BatchFilters {

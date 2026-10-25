@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { paymentService, studentService } from '@/services';
-import type { ChangePasswordRequest, UpdateLessonProgressRequest, UpdateProfileRequest } from '@/types';
+import type { ChangePasswordRequest, RazorpayVerifyRequest, UpdateLessonProgressRequest, UpdateProfileRequest } from '@/types';
 import { queryKeys } from './queryKeys';
 
 export const useStudentDashboard = () => useQuery({ queryKey: queryKeys.student.dashboard, queryFn: studentService.dashboard });
@@ -72,6 +72,16 @@ export const useStudentCertificate = (certificateId: string | undefined) =>
 export const useCreateOrder = () =>
   useMutation({ mutationFn: (payload: { courseId: string; applyWalletCredit?: boolean }) => paymentService.createOrder(payload) });
 
+export const useVerifyRazorpay = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: RazorpayVerifyRequest) => paymentService.verifyRazorpay(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.student.all });
+    },
+  });
+};
+
 export const useCompleteSandboxCheckout = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -81,3 +91,7 @@ export const useCompleteSandboxCheckout = () => {
     },
   });
 };
+
+/** The student's batches with schedule and protected session links (server-authorised). */
+export const useMyBatches = (courseId?: string) =>
+  useQuery({ queryKey: queryKeys.student.batches(courseId), queryFn: () => studentService.batches(courseId) });

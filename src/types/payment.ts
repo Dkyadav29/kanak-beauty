@@ -47,7 +47,21 @@ export interface CreateOrderResponse {
   gateway: {
     provider: string;
     checkoutToken: string;
+    /** Razorpay only (null for other providers): publishable key id, provider order id, amount in paise, merchant name. */
+    keyId: string | null;
+    razorpayOrderId: string | null;
+    amountMinor: number | null;
+    name: string | null;
   };
+  /** "paid" straight away when nothing is left to collect (e.g. wallet credit covers the price). */
+  status: PaymentStatus;
+}
+
+/** What Razorpay Checkout passes to its success handler; the backend verifies the signature. */
+export interface RazorpayVerifyRequest {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
 }
 
 export interface PaymentFilters {

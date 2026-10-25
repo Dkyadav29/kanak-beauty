@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Award, CheckCircle2, ChevronLeft, ChevronRight, Circle, Download, FileText, Lock, MessageCircle, PlayCircle, Radio } from 'lucide-react';
+import { BatchAccessCard } from '@/components/shared/BatchAccessCard';
 import { useCourseProgress, useStudentCourse, useStudentLiveSessions, useUpdateLessonProgress } from '@/hooks/useStudent';
 import { getErrorMessage } from '@/lib/api/errors';
 import { ApiError } from '@/lib/api/errors';
@@ -142,6 +143,8 @@ const CourseLearningPage = () => {
           </Link>
         </InlineAlert>
       ) : null}
+
+      <BatchAccessCard courseId={c.id} />
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         <aside className="card hidden max-h-[calc(100vh-8rem)] overflow-y-auto p-4 scrollbar-thin lg:sticky lg:top-24 lg:block">{Sidebar}</aside>

@@ -14,12 +14,25 @@ const schema = z
     trainerId: z.string().min(1, 'Select a trainer'),
     startDate: z.string().min(1, 'Select a start date'),
     endDate: z.string().min(1, 'Select an end date'),
+    startTime: z.string().min(1, 'Select a start time'),
+    endTime: z.string().min(1, 'Select an end time'),
     capacity: z.number({ invalid_type_error: 'Enter a number' }).int('Enter a whole number').min(1, 'At least 1 seat'),
     scheduleNote: z.string().max(240, 'At most 240 characters'),
+    meetLink: z
+      .string()
+      .trim()
+      .max(500, 'At most 500 characters')
+      .refine((v) => !v || /^https:\/\/meet\.google\.com\/\S+$/i.test(v), 'Enter a Google Meet link (https://meet.google.com/...)'),
+    recordingLink: z
+      .string()
+      .trim()
+      .max(500, 'At most 500 characters')
+      .refine((v) => !v || /^https:\/\/\S+$/i.test(v), 'Enter a valid https:// link'),
   })
-  .refine((v) => !v.startDate || !v.endDate || v.endDate >= v.startDate, { message: 'Must be on or after the start date', path: ['endDate'] });
+  .refine((v) => !v.startDate || !v.endDate || v.endDate >= v.startDate, { message: 'Must be on or after the start date', path: ['endDate'] })
+  .refine((v) => !v.startTime || !v.endTime || v.endTime > v.startTime, { message: 'Must be after the start time', path: ['endTime'] });
 type FormValues = z.infer<typeof schema>;
-const FIELD_KEYS: Array<keyof FormValues> = ['name', 'courseId', 'trainerId', 'startDate', 'endDate', 'capacity', 'scheduleNote'];
+const FIELD_KEYS: Array<keyof FormValues> = ['name', 'courseId', 'trainerId', 'startDate', 'endDate', 'startTime', 'endTime', 'capacity', 'scheduleNote', 'meetLink', 'recordingLink'];
 
 const toValues = (b?: Batch): FormValues => ({
   name: b?.name ?? '',
@@ -27,8 +40,13 @@ const toValues = (b?: Batch): FormValues => ({
   trainerId: b?.trainerId ?? '',
   startDate: b?.startDate ?? '',
   endDate: b?.endDate ?? '',
+  // API times are "HH:MM:SS"; <input type="time"> wants "HH:MM".
+  startTime: b?.startTime?.slice(0, 5) ?? '',
+  endTime: b?.endTime?.slice(0, 5) ?? '',
   capacity: b?.capacity ?? 20,
   scheduleNote: b?.scheduleNote ?? '',
+  meetLink: b?.meetLink ?? '',
+  recordingLink: b?.recordingLink ?? '',
 });
 
 /** Create / edit form for a batch. `onSubmit` should throw on failure; API field errors are mapped onto the form. */
@@ -70,7 +88,7 @@ export const BatchFormDialog = ({
   const submit = async (values: FormValues) => {
     setServerError(null);
     try {
-      await onSubmit({ ...values, name: values.name.trim(), scheduleNote: values.scheduleNote.trim() });
+      await onSubmit({ ...values, name: values.name.trim(), scheduleNote: values.scheduleNote.trim(), meetLink: values.meetLink.trim(), recordingLink: values.recordingLink.trim() });
       onClose();
     } catch (e) {
       if (e instanceof ApiError && e.details) {
@@ -137,17 +155,35 @@ export const BatchFormDialog = ({
             ))}
           </Select>
         </FormField>
-        <FormField label="Start date" htmlFor="batch-start" error={errors.startDate?.message} required>
+        <FormField label="Batch start date" htmlFor="batch-start" error={errors.startDate?.message} required>
           <Input id="batch-start" type="date" invalid={!!errors.startDate} {...register('startDate')} />
         </FormField>
         <FormField label="End date" htmlFor="batch-end" error={errors.endDate?.message} required>
           <Input id="batch-end" type="date" invalid={!!errors.endDate} {...register('endDate')} />
+        </FormField>
+        <FormField label="Class start time" htmlFor="batch-start-time" error={errors.startTime?.message} required>
+          <Input id="batch-start-time" type="time" invalid={!!errors.startTime} {...register('startTime')} />
+        </FormField>
+        <FormField label="Class end time" htmlFor="batch-end-time" error={errors.endTime?.message} hint="The trainer cannot be booked into another batch at an overlapping time." required>
+          <Input id="batch-end-time" type="time" invalid={!!errors.endTime} {...register('endTime')} />
         </FormField>
         <FormField label="Capacity" htmlFor="batch-capacity" error={errors.capacity?.message} hint="Maximum number of seats" required>
           <Input id="batch-capacity" type="number" min={1} step={1} invalid={!!errors.capacity} {...register('capacity', { valueAsNumber: true })} />
         </FormField>
         <FormField label="Schedule note" htmlFor="batch-note" error={errors.scheduleNote?.message} hint="Shown to students, e.g. Sat & Sun, 10:00–13:00" className="sm:col-span-2">
           <Textarea id="batch-note" rows={2} invalid={!!errors.scheduleNote} {...register('scheduleNote')} />
+        </FormField>
+        <FormField
+          label="Google Meet link"
+          htmlFor="batch-meet"
+          error={errors.meetLink?.message}
+          hint="Private: shown only to paid or enrolled students of this batch, never on public pages."
+          className="sm:col-span-2"
+        >
+          <Input id="batch-meet" type="url" placeholder="https://meet.google.com/abc-defg-hij" invalid={!!errors.meetLink} {...register('meetLink')} />
+        </FormField>
+        <FormField label="Recorded session link" htmlFor="batch-recording" error={errors.recordingLink?.message} hint="Private, like the Meet link. Can be added after the class." className="sm:col-span-2">
+          <Input id="batch-recording" type="url" placeholder="https://drive.google.com/..." invalid={!!errors.recordingLink} {...register('recordingLink')} />
         </FormField>
       </form>
     </Dialog>

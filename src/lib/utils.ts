@@ -29,6 +29,16 @@ export const formatDateTime = (iso: string | null | undefined) => {
 export const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
 
+/** Batch class time from API "HH:MM[:SS]" values, e.g. "6:00 PM – 8:00 PM". Null when either end is missing. */
+export const formatClassTime = (start: string | null | undefined, end: string | null | undefined) => {
+  if (!start || !end) return null;
+  const fmt = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return new Date(2000, 0, 1, h, m).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+  };
+  return `${fmt(start)} – ${fmt(end)}`;
+};
+
 export const formatDuration = (minutes: number) => {
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);

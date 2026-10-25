@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Clock, CreditCard, Gift, Lock, ShieldCheck, Wallet, XCircle } from 'lucide-react';
 import { useCourse } from '@/hooks/useCatalog';
-import { useCompleteSandboxCheckout, useCreateOrder, useEnrollments, useReferralSummary, useStudentPayment } from '@/hooks/useStudent';
+import { useCompleteSandboxCheckout, useCreateOrder, useEnrollments, useReferralSummary, useStudentPayment, useVerifyRazorpay } from '@/hooks/useStudent';
 import { useAuth } from '@/features/auth/AuthContext';
 import { ApiError, getErrorMessage } from '@/lib/api/errors';
+import { openRazorpay } from '@/lib/razorpay';
 import { env } from '@/config/env';
 import { formatCurrency } from '@/lib/utils';
 import type { CreateOrderResponse } from '@/types';
@@ -14,9 +15,12 @@ import { Button, ErrorState, ImageWithFallback, InlineAlert, LinkButton, Loading
 /**
  * Checkout flow:
  *   1. Create an order (backend creates a PENDING payment).
- *   2. Hand off to the gateway (sandbox: the outcome is chosen here with success/failure buttons).
+ *   2. Hand off to the gateway. Razorpay: the Checkout popup collects the payment and its
+ *      signed result is sent to the backend for verification. Sandbox: the outcome is chosen
+ *      here with success/failure buttons.
  *   3. Poll the payment record. Access is granted only when the backend reports "paid",
- *      which happens via the verified gateway webhook, never from this screen.
+ *      which happens after it verifies the payment with the gateway (signed checkout result
+ *      or signed webhook), never from this screen.
  */
 const CheckoutPage = () => {
   const { courseId } = useParams();
@@ -27,7 +31,12 @@ const CheckoutPage = () => {
   const enrollments = useEnrollments();
   const createOrder = useCreateOrder();
   const simulate = useCompleteSandboxCheckout();
+  const verifyRazorpay = useVerifyRazorpay();
   const [order, setOrder] = useState<CreateOrderResponse | null>(null);
+  const [opening, setOpening] = useState(false);
+  // Set once Razorpay reports success: from then on we only wait for the backend to confirm.
+  const [confirming, setConfirming] = useState(false);
+  const paidInCheckout = useRef(false);
   const [method, setMethod] = useState('UPI');
   const [error, setError] = useState<string | null>(null);
   const [applyWalletCredit, setApplyWalletCredit] = useState(true);
@@ -49,12 +58,58 @@ const CheckoutPage = () => {
 
   const start = async () => {
     setError(null);
+    setConfirming(false);
     try {
       const res = await createOrder.mutateAsync({ courseId: c.id, applyWalletCredit });
       setOrder(res);
+      // Fully covered by discounts/credit: already paid and enrolled, nothing to collect.
+      if (res.status === 'paid') void enrollments.refetch();
     } catch (e) {
       if (e instanceof ApiError && e.code === 'ALREADY_ENROLLED') void enrollments.refetch();
       setError(getErrorMessage(e));
+    }
+  };
+
+  const payWithRazorpay = async () => {
+    const g = order?.gateway;
+    if (!order || !g?.keyId || !g.razorpayOrderId || g.amountMinor == null) return;
+    setError(null);
+    setOpening(true);
+    paidInCheckout.current = false;
+    try {
+      await openRazorpay(
+        {
+          key: g.keyId,
+          order_id: g.razorpayOrderId,
+          amount: g.amountMinor,
+          currency: order.currency,
+          name: g.name ?? 'Kanak Beauty Academy',
+          description: c.title,
+          prefill: { name: user?.name, email: user?.email, contact: user?.mobile },
+          notes: { orderId: order.orderId },
+          theme: { color: '#c2456b' },
+          handler: (res) => {
+            paidInCheckout.current = true;
+            setConfirming(true);
+            verifyRazorpay
+              .mutateAsync({ razorpayOrderId: res.razorpay_order_id, razorpayPaymentId: res.razorpay_payment_id, razorpaySignature: res.razorpay_signature })
+              // The webhook still settles the payment if this call fails, so keep polling either way.
+              .catch((e) => setError(`${getErrorMessage(e)} If money was deducted, your access will activate automatically within a few minutes.`))
+              .finally(() => void payment.refetch());
+          },
+          modal: {
+            confirm_close: true,
+            ondismiss: () => {
+              if (!paidInCheckout.current) setError('Payment window closed. You have not been charged; you can try again.');
+            },
+          },
+        },
+        (failure) => setError(failure.error.description || 'The payment failed. You can retry in the payment window.'),
+      );
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setOpening(false);
     }
   };
 
@@ -70,6 +125,7 @@ const CheckoutPage = () => {
   };
 
   const status = payment.data?.status;
+  const isRazorpay = order?.gateway.provider === 'razorpay';
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -161,9 +217,16 @@ const CheckoutPage = () => {
                   <dd>{formatCurrency(order.amount, order.currency)}</dd>
                 </div>
               </dl>
-              {status === 'pending' && simulate.isSuccess ? (
+              {status === 'pending' && (simulate.isSuccess || confirming) ? (
                 <div className="mt-6 flex items-center gap-3 rounded-xl bg-ivory-100 p-4 text-sm text-charcoal-700">
-                  <Spinner /> Waiting for the payment provider to confirm…
+                  <Spinner /> Payment received. Confirming with the payment provider and activating your course…
+                </div>
+              ) : isRazorpay ? (
+                <div className="mt-6">
+                  <Button size="lg" onClick={() => void payWithRazorpay()} loading={opening} leftIcon={<CreditCard className="h-4 w-4" />}>
+                    Pay {formatCurrency(order.amount, order.currency)}
+                  </Button>
+                  <p className="mt-3 text-xs text-charcoal-500">UPI, cards, net banking and wallets via Razorpay. Your course unlocks automatically once the payment succeeds.</p>
                 </div>
               ) : (
                 <>

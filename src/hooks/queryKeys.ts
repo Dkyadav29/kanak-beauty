@@ -20,6 +20,7 @@ export const queryKeys = {
     course: (courseId: string) => ['student', 'course', courseId] as const,
     progress: (courseId: string) => ['student', 'progress', courseId] as const,
     liveSessions: (scope: string) => ['student', 'live', scope] as const,
+    batches: (courseId = '') => ['student', 'batches', courseId] as const,
     recordings: (filters: object = {}) => ['student', 'recordings', filters] as const,
     payments: ['student', 'payments'] as const,
     payment: (id: string) => ['student', 'payment', id] as const,

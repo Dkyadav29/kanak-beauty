@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRightLeft, CalendarX2, ClipboardCheck, Pencil, UserMinus, UserPlus } from 'lucide-react';
 import { useAdminBatch, useAdminSessions, useBatchMutations, useEnrolledStudents, useSessionMutations } from '@/hooks/useAdmin';
 import { getErrorMessage } from '@/lib/api/errors';
-import { formatDate, formatDateTime, formatDuration, percent, titleCase } from '@/lib/utils';
+import { formatClassTime, formatDate, formatDateTime, formatDuration, percent, titleCase } from '@/lib/utils';
 import type { BatchHistoryEventType, BatchStatus, BatchStudentRow, LiveSession } from '@/types';
 import { PermissionGate } from '@/components/auth/guards';
 import { Badge, Button, Card, CardBody, ConfirmationDialog, DataTable, Dialog, EmptyState, ErrorState, FormField, InlineAlert, KeyValue, LoadingSkeleton, PageHeader, ProgressBar, Select, StatusBadge, Tabs, Textarea, useToast, type BadgeTone, type Column } from '@/components/ui';
@@ -230,7 +230,28 @@ const AdminBatchDetailPage = () => {
                   </div>
                 ),
               },
+              { label: 'Class time', value: formatClassTime(b.startTime, b.endTime) ?? 'Not set' },
               { label: 'Schedule', value: b.scheduleNote || '—' },
+              {
+                label: 'Google Meet link',
+                value: b.meetLink ? (
+                  <a href={b.meetLink} target="_blank" rel="noopener noreferrer" className="break-all font-medium text-rose-700 hover:underline">
+                    {b.meetLink}
+                  </a>
+                ) : (
+                  'Not added'
+                ),
+              },
+              {
+                label: 'Recording link',
+                value: b.recordingLink ? (
+                  <a href={b.recordingLink} target="_blank" rel="noopener noreferrer" className="break-all font-medium text-rose-700 hover:underline">
+                    {b.recordingLink}
+                  </a>
+                ) : (
+                  'Not added'
+                ),
+              },
               { label: 'Created', value: formatDateTime(b.createdAt) },
               { label: 'Last updated', value: formatDateTime(b.updatedAt) },
               { label: 'Batch ID', value: <span className="font-mono text-xs">{b.id}</span> },

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useAdminBatches, useAdminCourses, useAdminTrainers, useBatchMutations } from '@/hooks/useAdmin';
-import { formatDate, percent } from '@/lib/utils';
+import { formatClassTime, formatDate, percent } from '@/lib/utils';
 import type { BatchFilters, BatchSummary } from '@/types';
 import { PermissionGate } from '@/components/auth/guards';
 import { Button, DataTable, PageHeader, ProgressBar, SearchAndFilters, StatusBadge, useToast, type Column } from '@/components/ui';
@@ -56,6 +56,7 @@ const AdminBatchesPage = () => {
       render: (b) => (
         <span className="whitespace-nowrap text-charcoal-700">
           {formatDate(b.startDate)} – {formatDate(b.endDate)}
+          {formatClassTime(b.startTime, b.endTime) ? <span className="block text-xs text-charcoal-500">{formatClassTime(b.startTime, b.endTime)}</span> : null}
         </span>
       ),
       hideBelow: 'sm',
