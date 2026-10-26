@@ -11,7 +11,10 @@
     "lint": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "site:on": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/site.ps1 on",
+    "site:off": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/site.ps1 off",
+    "site:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/site.ps1 status"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",

@@ -1,0 +1,11 @@
+// Maintenance page for the "kanak-beauty" Worker (the one kanakbeautyservice.com points to).
+// Used only by scripts/site.ps1 ("npm run site:off"); every URL shows site/index.html.
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "kanak-beauty",
+  "compatibility_date": "2026-10-23",
+  "assets": {
+    "directory": "./site",
+    "not_found_handling": "single-page-application"
+  }
+}
