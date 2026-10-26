@@ -2,6 +2,8 @@ import { apiClient } from '@/lib/api/client';
 import type {
   AdminAnalytics,
   AdminHeroSlide,
+  AdminHomeVideo,
+  HomeVideoInput,
   AdminOverviewStats,
   AuditLog,
   AuditLogFilters,
@@ -201,6 +203,8 @@ export const adminService = {
     await apiClient.delete(`/admin/hero-slides/${slideId}`);
   },
   reorderHeroSlides: async (ids: string[]) => (await apiClient.put<AdminHeroSlide[]>('/admin/hero-slides/order', { ids })).data,
+  homeVideo: async () => (await apiClient.get<AdminHomeVideo>('/admin/home-video')).data,
+  updateHomeVideo: async (input: HomeVideoInput) => (await apiClient.put<AdminHomeVideo>('/admin/home-video', input)).data,
 
   // audit
   auditLogs: async (filters: AuditLogFilters & PageQuery = {}) =>

@@ -7,6 +7,7 @@ import {
   BookOpen,
   CalendarClock,
   ChevronLeft,
+  Clapperboard,
   CreditCard,
   FileClock,
   Gift,
@@ -94,7 +95,10 @@ export const ADMIN_NAV: NavGroup[] = [
   },
   {
     title: 'Website',
-    items: [{ to: '/admin/hero-slides', label: 'Hero Slider', icon: Images, permission: 'content:manage' }],
+    items: [
+      { to: '/admin/hero-slides', label: 'Hero Slider', icon: Images, permission: 'content:manage' },
+      { to: '/admin/home-video', label: 'Home Video', icon: Clapperboard, permission: 'content:manage' },
+    ],
   },
   {
     title: 'Governance',

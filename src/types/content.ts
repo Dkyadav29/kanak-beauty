@@ -31,3 +31,52 @@ export interface HeroSlideInput {
   focus?: HeroSlideFocus;
   isActive?: boolean;
 }
+
+export type HomeVideoProvider = 'youtube' | 'vimeo' | 'drive' | 'file';
+
+/** GET /home-video: the section under the hero; `enabled: false` when hidden or not set up. */
+export type PublicHomeVideo =
+  | { enabled: false }
+  | {
+      enabled: true;
+      eyebrow: string;
+      title: string;
+      description: string;
+      provider: HomeVideoProvider;
+      /** iframe src (YouTube/Vimeo/Drive) or the video file URL (provider "file"). */
+      embedUrl: string;
+      /** Custom poster, else the YouTube thumbnail; null when neither exists. */
+      posterUrl: string | null;
+      buttonLabel: string;
+      buttonUrl: string;
+    };
+
+/** GET/PUT /admin/home-video. */
+export interface AdminHomeVideo {
+  isActive: boolean;
+  eyebrow: string;
+  title: string;
+  description: string;
+  /** The link the admin pasted. */
+  videoUrl: string;
+  /** Derived from videoUrl; null when it is empty or unsupported. */
+  provider: HomeVideoProvider | null;
+  embedUrl: string | null;
+  posterUrl: string | null;
+  /** The admin's own poster image ('' = use the YouTube thumbnail). */
+  customPosterUrl: string;
+  buttonLabel: string;
+  buttonUrl: string;
+  updatedAt: string;
+}
+
+export interface HomeVideoInput {
+  isActive: boolean;
+  eyebrow: string;
+  title: string;
+  description: string;
+  videoUrl: string;
+  posterUrl: string;
+  buttonLabel: string;
+  buttonUrl: string;
+}

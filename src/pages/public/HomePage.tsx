@@ -2,14 +2,15 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Award, BriefcaseBusiness, CalendarCheck2, GraduationCap, PlayCircle, Route, Sparkles, Users, Video } from 'lucide-react';
-import { useAcademyStats, useCourses, useHeroSlides, useUpcomingSessions } from '@/hooks/useCatalog';
+import { useAcademyStats, useCourses, useHeroSlides, useHomeVideo, useUpcomingSessions } from '@/hooks/useCatalog';
 import { resolveApiUrl } from '@/lib/api/client';
 import { useAuth } from '@/features/auth/AuthContext';
 import { IMAGES } from '@/config/images';
 import { CourseCard } from '@/components/shared/CourseCard';
 import { HeroSlider } from '@/components/shared/HeroSlider';
+import { HomeVideoPlayer } from '@/components/shared/HomeVideoPlayer';
 import { LiveClassCard } from '@/components/shared/LiveClassCard';
-import { DemoBadge, EmptyState, ErrorState, ImageWithFallback, LinkButton, LoadingSkeleton, SectionHeading, Skeleton } from '@/components/ui';
+import { DemoBadge, EmptyState, ErrorState, ImageWithFallback, LinkButton, LoadingSkeleton, SectionHeading, Skeleton, buttonClasses } from '@/components/ui';
 
 const features = [
   { icon: Sparkles, title: 'Expert-led practical training', text: 'Learn hands-on from working makeup artists, hairstylists and skincare specialists on real models.' },
@@ -31,6 +32,7 @@ const HomePage = () => {
   const sessions = useUpcomingSessions(3);
   const stats = useAcademyStats();
   const heroSlides = useHeroSlides();
+  const homeVideo = useHomeVideo();
   const { isAuthenticated } = useAuth();
   const slides = useMemo(
     () => (heroSlides.data ?? []).map((s) => ({ id: s.id, src: resolveApiUrl(s.imageUrl), alt: s.alt, eyebrow: s.eyebrow, caption: s.caption, focus: s.focus })),
@@ -71,6 +73,31 @@ const HomePage = () => {
           ) : null}
         </div>
       </section>
+
+      {/* Video section: managed by admins (Admin > Home Video); hidden until switched on. */}
+      {homeVideo.data?.enabled ? (
+        <section className="container-x pt-16 lg:pt-20">
+          <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.35fr] lg:gap-14">
+            <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
+              <SectionHeading eyebrow={homeVideo.data.eyebrow || undefined} title={homeVideo.data.title} description={homeVideo.data.description || undefined} />
+              {homeVideo.data.buttonLabel && homeVideo.data.buttonUrl ? (
+                homeVideo.data.buttonUrl.startsWith('/') ? (
+                  <LinkButton to={homeVideo.data.buttonUrl} className="mt-6" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                    {homeVideo.data.buttonLabel}
+                  </LinkButton>
+                ) : (
+                  <a href={homeVideo.data.buttonUrl} target="_blank" rel="noopener noreferrer" className={buttonClasses('primary', 'md', 'mt-6 gap-2')}>
+                    {homeVideo.data.buttonLabel} <ArrowRight className="h-4 w-4" />
+                  </a>
+                )
+              ) : null}
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.1 }}>
+              <HomeVideoPlayer provider={homeVideo.data.provider} embedUrl={homeVideo.data.embedUrl} posterUrl={homeVideo.data.posterUrl} title={homeVideo.data.title} />
+            </motion.div>
+          </div>
+        </section>
+      ) : null}
 
       {/* Featured courses */}
       <section className="container-x py-16 lg:py-20">

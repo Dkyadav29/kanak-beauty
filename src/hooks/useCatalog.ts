@@ -23,6 +23,8 @@ export const useTrainers = () => useQuery({ queryKey: queryKeys.catalog.trainers
 
 export const useHeroSlides = () => useQuery({ queryKey: queryKeys.catalog.heroSlides, queryFn: catalogService.heroSlides, staleTime: 60_000 });
 
+export const useHomeVideo = () => useQuery({ queryKey: queryKeys.catalog.homeVideo, queryFn: catalogService.homeVideo, staleTime: 60_000 });
+
 export const useAcademyStats = () => useQuery({ queryKey: queryKeys.catalog.stats, queryFn: catalogService.stats, staleTime: 5 * 60_000 });
 
 export const useValidateReferral = (code: string | undefined) =>

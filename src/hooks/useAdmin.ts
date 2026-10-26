@@ -13,6 +13,7 @@ import type {
   DateRangeFilter,
   EnrollmentFilters,
   HeroSlideInput,
+  HomeVideoInput,
   LiveSessionUpsertRequest,
   PageQuery,
   PaymentFilters,
@@ -225,4 +226,14 @@ export const useCertificateSettingsMutations = () => {
     upload: useMutation({ mutationFn: ({ kind, file }: { kind: CertificateImageKind; file: File }) => adminService.uploadCertificateImage(kind, file), onSuccess: done }),
     remove: useMutation({ mutationFn: (kind: CertificateImageKind) => adminService.removeCertificateImage(kind), onSuccess: done }),
   };
+};
+
+// home page video section
+export const useAdminHomeVideo = () => useQuery({ queryKey: queryKeys.admin.homeVideo, queryFn: adminService.homeVideo });
+export const useUpdateHomeVideo = () => {
+  const invalidate = useInvalidateAdmin();
+  return useMutation({
+    mutationFn: (input: HomeVideoInput) => adminService.updateHomeVideo(input),
+    onSuccess: () => invalidate(queryKeys.admin.homeVideo, queryKeys.catalog.homeVideo),
+  });
 };

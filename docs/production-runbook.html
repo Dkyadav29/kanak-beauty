@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kanak Production Runbook</title>
+<style>
+  :root {
+    --bg: #fbf8f5; --surface: #ffffff; --surface-2: #f4eee8; --text: #2a2422; --muted: #6b605b;
+    --border: #e6ddd5; --accent: #a1304f; --accent-soft: #fbeef1; --code-bg: #1f1b1a; --code-text: #f3ece6;
+    --ok: #1f7a4d; --ok-soft: #e7f5ee; --warn: #8a5a00; --warn-soft: #fff4dc; --danger: #a11d2d; --danger-soft: #fde9eb;
+    --info: #1d5d8f; --info-soft: #e8f1fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151212; --surface: #1d1918; --surface-2: #262120; --text: #efe7e2; --muted: #b0a49e;
+      --border: #3a3331; --accent: #e5809d; --accent-soft: #3a1f27; --code-bg: #0e0c0c; --code-text: #f3ece6;
+      --ok: #6fd3a0; --ok-soft: #173126; --warn: #f0c060; --warn-soft: #362b12; --danger: #f2919c; --danger-soft: #3a1a1f;
+      --info: #8cc2ef; --info-soft: #162a3b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151212; --surface: #1d1918; --surface-2: #262120; --text: #efe7e2; --muted: #b0a49e;
+    --border: #3a3331; --accent: #e5809d; --accent-soft: #3a1f27; --code-bg: #0e0c0c; --code-text: #f3ece6;
+    --ok: #6fd3a0; --ok-soft: #173126; --warn: #f0c060; --warn-soft: #362b12; --danger: #f2919c; --danger-soft: #3a1a1f;
+    --info: #8cc2ef; --info-soft: #162a3b;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--accent); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 20px; border-right: 1px solid var(--border); background: var(--surface); }
+  nav h1 { font-size: 17px; margin: 0 0 4px; }
+  nav p { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
+  nav ol { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+  nav li a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--text); text-decoration: none; font-size: 14px; }
+  nav li a:hover { background: var(--accent-soft); color: var(--accent); }
+  main { padding: 40px 48px 120px; max-width: 980px; }
+  header.top { margin-bottom: 32px; }
+  header.top h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; }
+  header.top p { color: var(--muted); margin: 0; }
+  section { margin-top: 56px; scroll-margin-top: 16px; }
+  h2 { font-size: 24px; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  h2 .num { color: var(--accent); margin-right: 8px; }
+  h3 { font-size: 18px; margin: 28px 0 8px; }
+  p, li { max-width: 78ch; }
+  code { font: 13.5px/1.5 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  .cmd { position: relative; margin: 12px 0 18px; }
+  .cmd pre { margin: 0; background: var(--code-bg); color: var(--code-text); padding: 14px 16px; border-radius: 10px; overflow-x: auto; font: 13.5px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; }
+  .cmd .where { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .cmd button { position: absolute; top: 28px; right: 8px; border: 1px solid #4a403d; background: #2c2523; color: #f3ece6; font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+  .cmd button:hover { background: #3b322f; }
+  .note { border-left: 4px solid; border-radius: 8px; padding: 12px 16px; margin: 16px 0; }
+  .note p { margin: 4px 0; }
+  .note.info { background: var(--info-soft); border-color: var(--info); }
+  .note.warn { background: var(--warn-soft); border-color: var(--warn); }
+  .note.danger { background: var(--danger-soft); border-color: var(--danger); }
+  .note.ok { background: var(--ok-soft); border-color: var(--ok); }
+  .note strong:first-child { display: block; margin-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 14.5px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--surface-2); font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  .table-wrap { overflow-x: auto; }
+  ol.steps { padding-left: 22px; }
+  ol.steps > li { margin: 8px 0; }
+  .arch { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; }
+  .arch div { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .arch b { display: block; color: var(--accent); margin-bottom: 4px; }
+  .arch span { font-size: 14px; color: var(--muted); }
+  .check li { list-style: none; margin-left: -20px; }
+  .check li::before { content: "☐ "; color: var(--accent); }
+  .pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .theme-toggle { margin-top: 18px; font-size: 13px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+    main { padding: 24px 16px 80px; }
+    header.top h1 { font-size: 26px; }
+  }
+  @media print {
+    nav, .cmd button, .theme-toggle { display: none; }
+    .layout { display: block; }
+    .cmd pre { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav aria-label="Contents">
+  <h1>Kanak Production Runbook</h1>
+  <p>AWS EC2 · MariaDB · SES · Razorpay · Cloudflare</p>
+  <ol>
+    <li><a href="#overview">0. Overview</a></li>
+    <li><a href="#values">1. Values &amp; accounts</a></li>
+    <li><a href="#dns">2. Domain &amp; DNS</a></li>
+    <li><a href="#ec2">3. Create the EC2 server</a></li>
+    <li><a href="#base">4. Server base setup</a></li>
+    <li><a href="#db">5. MariaDB</a></li>
+    <li><a href="#code">6. Backend code &amp; .env</a></li>
+    <li><a href="#gunicorn">7. Gunicorn service</a></li>
+    <li><a href="#nginx">8. Nginx &amp; HTTPS</a></li>
+    <li><a href="#firstdeploy">9. First deploy &amp; admin</a></li>
+    <li><a href="#ses">10. AWS SES email</a></li>
+    <li><a href="#razorpay">11. Razorpay live</a></li>
+    <li><a href="#frontend">12. Frontend (Cloudflare)</a></li>
+    <li><a href="#uat">13. Moving from UAT</a></li>
+    <li><a href="#golive">14. Go-live checklist</a></li>
+    <li><a href="#ops">15. Day-to-day operations</a></li>
+    <li><a href="#backup">16. Backups &amp; restore</a></li>
+    <li><a href="#trouble">17. Troubleshooting</a></li>
+    <li><a href="#rollback">18. Rollback</a></li>
+    <li><a href="#envref">Appendix: .env reference</a></li>
+  </ol>
+  <button class="theme-toggle" type="button" id="themeToggle">Toggle dark / light</button>
+</nav>
+
+<main>
+<header class="top">
+  <h1>Kanak Beauty Academy: production deployment runbook</h1>
+  <p>Every step and command to run the platform for real students: one AWS EC2 server (Django API + MariaDB), AWS SES for email, Razorpay for payments and Cloudflare for the website. Written 25 October 2026 against backend commit <code>b0aab36</code> and later.</p>
+</header>
+
+<!-- ===================================================================== -->
+<section id="overview">
+<h2><span class="num">0</span>Overview</h2>
+<div class="arch">
+  <div><b>Website (frontend)</b><span>React app on Cloudflare Workers, built from GitHub <code>Dkyadav29/kanak-beauty</code> on every push to <code>main</code>. Served at <code>https://kanakbeautyservice.com</code>.</span></div>
+  <div><b>API (backend)</b><span>Django + Gunicorn on AWS EC2 (Ubuntu 24.04), behind Nginx with a Let's Encrypt certificate. Served at <code>https://api.kanakbeautyservice.com/api/v1</code>. Code from GitHub <code>Dkyadav29/kanak-beauty-backend</code>.</span></div>
+  <div><b>Database</b><span>MariaDB on the same EC2 server, database <code>kanak_academy</code>. Uploaded files in <code>media/</code> on the server disk.</span></div>
+  <div><b>Email</b><span>AWS SES (SMTP) sends OTP, password-reset and enrollment emails.</span></div>
+  <div><b>Payments</b><span>Razorpay Checkout. A paid payment unlocks the course automatically (checkout verification plus signed webhook).</span></div>
+  <div><b>Daily job</b><span>systemd timer runs <code>complete_ended_batches</code> at 00:30 to close finished batches and issue certificates.</span></div>
+</div>
+<div class="note info">
+  <strong>How to read this guide</strong>
+  <p>Each black box is a command. The label above it says <b>where</b> to run it: <span class="pill">Your PC</span>, <span class="pill">Server</span> (an SSH or EC2 Instance Connect terminal on the production EC2) or a dashboard. Replace the example values from section 1 wherever they appear.</p>
+  <p>Do the sections in order the first time. Sections 15 to 18 are for after go-live.</p>
+</div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="values">
+<h2><span class="num">1</span>Values &amp; accounts you need</h2>
+<p>This guide uses the values below. <b>The domain is an example</b> (it matches the academy's email address). If your domain is different, replace it everywhere.</p>
+<div class="table-wrap"><table>
+  <tr><th>Name</th><th>Example used here</th><th>What it is</th></tr>
+  <tr><td>Website domain</td><td><code>kanakbeautyservice.com</code></td><td>What students type. Also add <code>www.</code>.</td></tr>
+  <tr><td>API domain</td><td><code>api.kanakbeautyservice.com</code></td><td>Points to the EC2 server.</td></tr>
+  <tr><td>AWS region</td><td><code>us-east-2</code> (Ohio)</td><td>Same region for EC2 and SES. Mumbai (<code>ap-south-1</code>) is closer to Indian students; if you use it, change the SES SMTP host to match.</td></tr>
+  <tr><td>Server user</td><td><code>ubuntu</code></td><td>Default user on Ubuntu EC2 images.</td></tr>
+  <tr><td>App folder</td><td><code>/home/ubuntu/apps/kanak-beauty-backend</code></td><td>Backend checkout on the server (the update script expects this path).</td></tr>
+  <tr><td>Sender email</td><td><code>no-reply@kanakbeautyservice.com</code></td><td>"From" address of every email.</td></tr>
+</table></div>
+<h3>Accounts checklist</h3>
+<ul class="check">
+  <li>AWS account with billing set up (root account protected by MFA; daily work done as an IAM user).</li>
+  <li>Domain bought, with DNS managed in Cloudflare.</li>
+  <li>Cloudflare account that owns the <code>kanak-beauty</code> Workers project.</li>
+  <li>GitHub access to <code>Dkyadav29/kanak-beauty</code> and <code>Dkyadav29/kanak-beauty-backend</code>.</li>
+  <li>Razorpay account with KYC completed (needed for live keys).</li>
+  <li>A password manager to store every secret created below.</li>
+</ul>
+<h3>Generate the secrets once</h3>
+<p>You need four random secrets. Run this four times and save each result in the password manager:</p>
+<div class="cmd"><span class="where">Your PC or Server</span><pre>python3 -c "import secrets; print(secrets.token_urlsafe(50))"</pre></div>
+<table>
+  <tr><th>Secret</th><th>Used for</th></tr>
+  <tr><td><code>DJANGO_SECRET_KEY</code></td><td>Django signing</td></tr>
+  <tr><td><code>JWT_SIGNING_KEY</code></td><td>Login tokens (must differ from the Django key)</td></tr>
+  <tr><td><code>PAYMENT_WEBHOOK_SECRET</code></td><td>Internal webhook signature (required even with Razorpay)</td></tr>
+  <tr><td>Database password</td><td>MariaDB user <code>kanak</code> (use letters and digits only, it goes into SQL and .env)</td></tr>
+</table>
+<div class="note danger"><strong>Never reuse the UAT secrets in production.</strong><p>Never commit any of these to GitHub. The production <code>.env</code> lives only on the server.</p></div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="dns">
+<h2><span class="num">2</span>Domain &amp; DNS (Cloudflare)</h2>
+<ol class="steps">
+  <li>Cloudflare dashboard → <b>Add a domain</b> → enter <code>kanakbeautyservice.com</code> → Free plan. If the domain was bought elsewhere, change its nameservers at the registrar to the two Cloudflare shows, and wait until Cloudflare says <i>Active</i>.</li>
+  <li>The website records are created automatically in section 12 when you attach the domain to the Worker.</li>
+  <li>The API record is created in section 3, step 6, once the server has its fixed IP.</li>
+</ol>
+<div class="note warn"><strong>Keep the API record "DNS only" (grey cloud)</strong><p>The API's Let's Encrypt certificate, Razorpay webhooks and per-student rate limits all work best when Cloudflare does not proxy <code>api.</code>. Only the website (the Worker) goes through Cloudflare.</p></div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="ec2">
+<h2><span class="num">3</span>Create the EC2 server</h2>
+<ol class="steps">
+  <li>AWS console → top right, choose region <b>us-east-2</b>.</li>
+  <li><b>EC2 → Key pairs → Create key pair</b>: name <code>kanak-prod-key</code>, type RSA, format <code>.pem</code>. Save the downloaded file safely (for example on your Desktop). You cannot download it again.</li>
+  <li><b>EC2 → Security groups → Create security group</b> named <code>kanak-prod-sg</code> with these inbound rules:
+    <table>
+      <tr><th>Type</th><th>Port</th><th>Source</th><th>Why</th></tr>
+      <tr><td>SSH</td><td>22</td><td><b>My IP</b> only</td><td>Admin access. Never 0.0.0.0/0.</td></tr>
+      <tr><td>HTTP</td><td>80</td><td>0.0.0.0/0 and ::/0</td><td>Certificate issuing and redirect to HTTPS</td></tr>
+      <tr><td>HTTPS</td><td>443</td><td>0.0.0.0/0 and ::/0</td><td>API traffic</td></tr>
+    </table>
+    Do not open 3306 (MariaDB) or 8000 (Gunicorn); they stay private on the server.</li>
+  <li><b>EC2 → Instances → Launch instance</b>:
+    <ul>
+      <li>Name: <code>kanak-prod</code></li>
+      <li>Image: <b>Ubuntu Server 24.04 LTS</b> (64-bit x86)</li>
+      <li>Type: <b>t3.medium</b> (2 vCPU, 4 GB) recommended; <code>t3.small</code> (2 GB) is the minimum</li>
+      <li>Key pair: <code>kanak-prod-key</code></li>
+      <li>Network: existing security group <code>kanak-prod-sg</code></li>
+      <li>Storage: <b>30 GB gp3</b>, encrypted</li>
+      <li>Advanced → <b>Termination protection: Enable</b></li>
+    </ul></li>
+  <li><b>EC2 → Elastic IPs → Allocate</b> → select it → <b>Associate</b> with <code>kanak-prod</code>. This IP never changes, even after a reboot. Note it, for example <code>3.140.10.20</code>.</li>
+  <li>Cloudflare → your domain → <b>DNS → Add record</b>: type <code>A</code>, name <code>api</code>, IPv4 = the Elastic IP, proxy status <b>DNS only</b>, TTL Auto.</li>
+</ol>
+<h3>Connect to the server</h3>
+<div class="cmd"><span class="where">Your PC (Git Bash or PowerShell)</span><pre>ssh -i "$HOME/Desktop/kanak-prod-key.pem" ubuntu@api.kanakbeautyservice.com</pre></div>
+<div class="note info"><strong>Office network blocks port 22?</strong><p>Use the browser terminal instead: EC2 → Instances → select <code>kanak-prod</code> → <b>Connect</b> → <b>EC2 Instance Connect</b> → Connect. Every "Server" command in this guide can be pasted there. (Instance Connect needs SSH from AWS's address range; if it fails, temporarily add the rule "SSH, port 22, source <i>EC2_INSTANCE_CONNECT</i> prefix list for us-east-2" to the security group.)</p></div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="base">
+<h2><span class="num">4</span>Server base setup</h2>
+<p>Updates, required packages, India time zone, swap (prevents crashes when memory runs low) and automatic security updates.</p>
+<div class="cmd"><span class="where">Server</span><pre>sudo apt update && sudo apt -y upgrade
+sudo apt -y install python3-venv python3-dev build-essential pkg-config git curl \
+  nginx mariadb-server mariadb-client certbot python3-certbot-nginx unattended-upgrades
+sudo timedatectl set-timezone Asia/Kolkata
+
+# 2 GB swap
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+# Automatic security updates
+sudo dpkg-reconfigure -f noninteractive unattended-upgrades
+
+# Let nginx read the app folder (static files)
+sudo chmod 711 /home/ubuntu
+python3 --version   # must be 3.12 or newer</pre></div>
+<p>Optional host firewall (the security group already protects the server):</p>
+<div class="cmd"><span class="where">Server</span><pre>sudo ufw allow OpenSSH && sudo ufw allow 'Nginx Full' && sudo ufw --force enable && sudo ufw status</pre></div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="db">
+<h2><span class="num">5</span>MariaDB</h2>
+<div class="cmd"><span class="where">Server</span><pre>sudo systemctl enable --now mariadb
+sudo mariadb-secure-installation</pre></div>
+<p>Answers: current root password <i>Enter</i>; switch to unix_socket <b>n</b>; change root password <b>n</b> (root logs in with <code>sudo mariadb</code>); remove anonymous users <b>Y</b>; disallow remote root <b>Y</b>; remove test database <b>Y</b>; reload privileges <b>Y</b>.</p>
+<p>Create the database and the application user. Replace <code>DB_PASSWORD_HERE</code> with the database password from section 1:</p>
+<div class="cmd"><span class="where">Server</span><pre>sudo mariadb &lt;&lt;'SQL'
+CREATE DATABASE IF NOT EXISTS kanak_academy CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'kanak'@'localhost' IDENTIFIED BY 'DB_PASSWORD_HERE';
+CREATE USER IF NOT EXISTS 'kanak'@'127.0.0.1' IDENTIFIED BY 'DB_PASSWORD_HERE';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, DROP, REFERENCES, LOCK TABLES
+  ON kanak_academy.* TO 'kanak'@'localhost', 'kanak'@'127.0.0.1';
+FLUSH PRIVILEGES;
+SQL
+
+# Check the login works
+mariadb -u kanak -p -h 127.0.0.1 kanak_academy -e "SELECT 1;"</pre></div>
+<div class="note info"><strong>Prefer a managed database?</strong><p>Amazon RDS for MariaDB adds automatic backups and failover at extra cost. Create it in the same VPC, allow port 3306 only from <code>kanak-prod-sg</code>, and put its endpoint in <code>DB_HOST</code>. Everything else in this guide stays the same.</p></div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="code">
+<h2><span class="num">6</span>Backend code &amp; production .env</h2>
+<div class="cmd"><span class="where">Server</span><pre>mkdir -p ~/apps && cd ~/apps
+git clone https://github.com/Dkyadav29/kanak-beauty-backend.git
+cd kanak-beauty-backend
+python3 -m venv .venv
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install -r requirements.txt
+mkdir -p media backups</pre></div>
+<p>Create the production settings file:</p>
+<div class="cmd"><span class="where">Server</span><pre>nano ~/apps/kanak-beauty-backend/.env</pre></div>
+<p>Paste this, replace every <code>CHANGE_ME</code>, then save (<kbd>Ctrl+O</kbd>, <kbd>Enter</kbd>, <kbd>Ctrl+X</kbd>). The SES and Razorpay values come from sections 10 and 11; you can fill them in then.</p>
+<div class="cmd"><span class="where">File: .env (server only)</span><pre># --- Django ---
+DJANGO_SETTINGS_MODULE=config.settings.production
+DJANGO_SECRET_KEY=CHANGE_ME
+DJANGO_ALLOWED_HOSTS=api.kanakbeautyservice.com
+LOG_LEVEL=INFO
+TIME_ZONE=Asia/Kolkata
+
+# --- MariaDB ---
+DB_NAME=kanak_academy
+DB_USER=kanak
+DB_PASSWORD=CHANGE_ME
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_CONN_MAX_AGE=60
+
+# --- Login tokens ---
+JWT_SIGNING_KEY=CHANGE_ME
+JWT_ACCESS_MINUTES=30
+JWT_REFRESH_DAYS=7
+
+# --- Website (CORS) ---
+PUBLIC_SITE_URL=https://kanakbeautyservice.com
+CORS_ALLOWED_ORIGINS=https://kanakbeautyservice.com,https://www.kanakbeautyservice.com
+CSRF_TRUSTED_ORIGINS=https://kanakbeautyservice.com,https://www.kanakbeautyservice.com,https://api.kanakbeautyservice.com
+
+# --- Payments (Razorpay live) ---
+PAYMENT_GATEWAY=razorpay
+PAYMENT_WEBHOOK_SECRET=CHANGE_ME
+PAYMENT_PENDING_REUSE_MINUTES=30
+RAZORPAY_KEY_ID=rzp_live_CHANGE_ME
+RAZORPAY_KEY_SECRET=CHANGE_ME
+RAZORPAY_WEBHOOK_SECRET=CHANGE_ME
+RAZORPAY_CHECKOUT_NAME="Kanak Beauty Academy"
+
+# --- Email (AWS SES over SMTP) ---
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=email-smtp.us-east-2.amazonaws.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=CHANGE_ME
+EMAIL_HOST_PASSWORD=CHANGE_ME
+EMAIL_TIMEOUT=10
+DEFAULT_FROM_EMAIL="Kanak Beauty Academy &lt;no-reply@kanakbeautyservice.com&gt;"
+
+# --- Auth flows ---
+OTP_TTL_MINUTES=15
+PASSWORD_RESET_TTL_MINUTES=30
+
+# --- Live classes / media ---
+LIVE_PROVIDER=internal
+SIGNED_URL_TTL_MINUTES=30
+
+# --- Identifiers ---
+CERTIFICATE_NUMBER_PREFIX=KBA
+ORDER_ID_PREFIX=KBA-ORD</pre></div>
+<div class="note danger">
+  <strong>Wrap values that contain spaces or &lt; &gt; in double quotes</strong>
+  <p>The update script loads this file with bash, so <code>DEFAULT_FROM_EMAIL=Kanak Beauty &lt;no-reply@...&gt;</code> without quotes breaks the deploy. Write it exactly as above, with quotes.</p>
+</div>
+<div class="cmd"><span class="where">Server</span><pre>chmod 600 ~/apps/kanak-beauty-backend/.env    # only the ubuntu user can read secrets</pre></div>
+<div class="note warn">
+  <strong>The production settings refuse to start when something is unsafe</strong>
+  <p>Startup stops with an error if <code>DJANGO_SECRET_KEY</code> or <code>PAYMENT_WEBHOOK_SECRET</code> is missing, if <code>PAYMENT_GATEWAY=sandbox</code>, or if <code>PAYMENT_GATEWAY=razorpay</code> without all three Razorpay values. Production also forces HTTPS, secure cookies and HSTS, and hides the API docs pages.</p>
+  <p>Until the Razorpay live keys arrive you can put the <b>test</b> keys (<code>rzp_test_...</code>) here, so the server starts and you can test end to end with no real money.</p>
+</div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="gunicorn">
+<h2><span class="num">7</span>Gunicorn service (systemd)</h2>
+<p>Runs the API in the background, restarts it if it crashes and starts it on boot. The update script restarts it by the name <code>kanak-backend</code>.</p>
+<div class="cmd"><span class="where">Server</span><pre>sudo tee /etc/systemd/system/kanak-backend.service &gt;/dev/null &lt;&lt;'UNIT'
+[Unit]
+Description=Kanak Beauty backend (Django + Gunicorn)
+After=network.target mariadb.service
+Wants=mariadb.service
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/apps/kanak-beauty-backend
+EnvironmentFile=/home/ubuntu/apps/kanak-beauty-backend/.env
+Environment=GUNICORN_BIND=127.0.0.1:8000
+Environment=GUNICORN_WORKERS=3
+ExecStart=/home/ubuntu/apps/kanak-beauty-backend/.venv/bin/gunicorn config.wsgi:application -c gunicorn.conf.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+sudo systemctl daemon-reload
+sudo systemctl enable kanak-backend</pre></div>
+<p>It is started in section 9, after the database tables exist. Rule of thumb for <code>GUNICORN_WORKERS</code>: 3 on t3.small, 5 on t3.medium.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="nginx">
+<h2><span class="num">8</span>Nginx &amp; HTTPS</h2>
+<p>Nginx receives HTTPS traffic and passes <code>/api/</code> to Gunicorn. Only the API, static files and course thumbnails are reachable; everything else returns 404. Recordings and materials stay private and are only served through the API's signed links.</p>
+<div class="cmd"><span class="where">Server</span><pre>sudo tee /etc/nginx/sites-available/kanak &gt;/dev/null &lt;&lt;'NGINX'
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.kanakbeautyservice.com;
+
+    client_max_body_size 10m;
+    server_tokens off;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+
+    location /static/ {
+        alias /home/ubuntu/apps/kanak-beauty-backend/staticfiles/;
+        expires 30d;
+        access_log off;
+    }
+
+    # Public course thumbnails only; other uploads are served through signed API links.
+    location /media/course-thumbnails/ {
+        alias /home/ubuntu/apps/kanak-beauty-backend/media/course-thumbnails/;
+        expires 7d;
+    }
+
+    location / {
+        return 404;
+    }
+}
+NGINX
+
+sudo ln -sf /etc/nginx/sites-available/kanak /etc/nginx/sites-enabled/kanak
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx</pre></div>
+<h3>Get the HTTPS certificate</h3>
+<p>The DNS record from section 3 must already point to the Elastic IP. Check with <code>nslookup api.kanakbeautyservice.com</code>.</p>
+<div class="cmd"><span class="where">Server</span><pre>sudo certbot --nginx -d api.kanakbeautyservice.com \
+  --non-interactive --agree-tos -m admin@kanakbeautyservice.com --redirect
+
+sudo systemctl status certbot.timer --no-pager   # auto-renewal is scheduled
+sudo certbot renew --dry-run                     # renewal works</pre></div>
+<p>Certbot adds the HTTPS block to the same Nginx file and redirects HTTP to HTTPS. Certificates renew automatically about every 60 days.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="firstdeploy">
+<h2><span class="num">9</span>First deploy &amp; admin account</h2>
+<p>The update script does a deploy in one go: pull <code>main</code>, install requirements, run database migrations, collect static files, install the daily batch-completion timer and restart the API. The same script is used for every later update.</p>
+<div class="cmd"><span class="where">Server</span><pre>cd ~/apps/kanak-beauty-backend
+bash scripts/uat_update.sh</pre></div>
+<p>It should end with <code>active</code> and <code>==&gt; Done.</code> (the script name says "uat", but it works for production unchanged). Then check from the outside:</p>
+<div class="cmd"><span class="where">Your PC</span><pre>curl https://api.kanakbeautyservice.com/api/v1/health
+# {"status": "ok"}</pre></div>
+<h3>Create the super admin</h3>
+<div class="cmd"><span class="where">Server</span><pre>cd ~/apps/kanak-beauty-backend
+set -a; . ./.env; set +a
+.venv/bin/python manage.py create_admin \
+  --email admin@kanakbeautyservice.com --name "Academy Admin" --password 'A-Strong#Password-2026'</pre></div>
+<div class="note warn"><strong>Do not run <code>seed_demo</code> on production</strong><p>It loads demo users and courses. Production starts empty; the admin creates trainers, courses, batches and hero slides in the admin panel.</p></div>
+<h3>Check the daily job</h3>
+<div class="cmd"><span class="where">Server</span><pre>systemctl list-timers kanak-complete-batches.timer --no-pager
+sudo systemctl start kanak-complete-batches.service && journalctl -u kanak-complete-batches -n 20 --no-pager</pre></div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="ses">
+<h2><span class="num">10</span>AWS SES email</h2>
+<p>SES sends registration OTPs, password-reset links and enrollment confirmations. Work in region <b>us-east-2</b> (the same region as <code>EMAIL_HOST</code>).</p>
+<h3>10.1 Verify the domain</h3>
+<ol class="steps">
+  <li>AWS console → <b>Amazon SES → Configuration → Identities → Create identity</b> → <b>Domain</b> → <code>kanakbeautyservice.com</code>.</li>
+  <li>Tick <b>Use a custom MAIL FROM domain</b> → <code>mail.kanakbeautyservice.com</code> (improves delivery to Gmail).</li>
+  <li>DKIM: <b>Easy DKIM</b>, RSA 2048-bit, <b>Publish DNS records to Route 53: off</b> (your DNS is in Cloudflare). Create identity.</li>
+  <li>SES now shows the DNS records. In Cloudflare → DNS, add each one, every one with <b>DNS only</b> (grey cloud):
+    <table>
+      <tr><th>Type</th><th>Name</th><th>Value</th><th>Purpose</th></tr>
+      <tr><td>CNAME ×3</td><td><code>xxxx._domainkey</code></td><td><code>xxxx.dkim.amazonses.com</code></td><td>DKIM (copy all three exactly from SES)</td></tr>
+      <tr><td>MX</td><td><code>mail</code></td><td><code>feedback-smtp.us-east-2.amazonses.com</code>, priority 10</td><td>Custom MAIL FROM</td></tr>
+      <tr><td>TXT</td><td><code>mail</code></td><td><code>v=spf1 include:amazonses.com ~all</code></td><td>SPF for MAIL FROM</td></tr>
+      <tr><td>TXT</td><td><code>_dmarc</code></td><td><code>v=DMARC1; p=none; rua=mailto:admin@kanakbeautyservice.com</code></td><td>DMARC (needed by Gmail/Yahoo)</td></tr>
+    </table></li>
+  <li>Wait until the identity shows <b>Verified</b> and DKIM <b>Successful</b> (usually under an hour).</li>
+</ol>
+<h3>10.2 Leave the sandbox (production access)</h3>
+<p>New SES accounts can only send to addresses you verified yourself. Students would get no email.</p>
+<ol class="steps">
+  <li>SES → <b>Account dashboard → Request production access</b>.</li>
+  <li>Mail type <b>Transactional</b>; website <code>https://kanakbeautyservice.com</code>.</li>
+  <li>Use case, for example: "Kanak Beauty Academy sends one-time verification codes, password-reset links and course enrollment confirmations to students who register on our site. We send only to users who sign up themselves, expect under 1,000 emails per day, and handle bounces and complaints by disabling the address."</li>
+  <li>Approval usually takes about one working day. Until then, verify your own test addresses under Identities → Email address.</li>
+</ol>
+<h3>10.3 Create SMTP credentials</h3>
+<ol class="steps">
+  <li>SES → <b>SMTP settings → Create SMTP credentials</b> → keep the suggested IAM user name → Create.</li>
+  <li>Copy the <b>SMTP user name</b> and <b>SMTP password</b>. The password is shown only once. These are not your AWS login.</li>
+  <li>Put them in the server <code>.env</code> as <code>EMAIL_HOST_USER</code> and <code>EMAIL_HOST_PASSWORD</code>, then restart:</li>
+</ol>
+<div class="cmd"><span class="where">Server</span><pre>nano ~/apps/kanak-beauty-backend/.env      # set EMAIL_HOST_USER / EMAIL_HOST_PASSWORD
+sudo systemctl restart kanak-backend</pre></div>
+<h3>10.4 Send a test email</h3>
+<div class="cmd"><span class="where">Server</span><pre>cd ~/apps/kanak-beauty-backend && set -a; . ./.env; set +a
+.venv/bin/python manage.py shell -c "from django.core.mail import send_mail; print(send_mail('Kanak SES test', 'SES works.', None, ['you@example.com']))"
+# prints 1 when SES accepted it</pre></div>
+<div class="note info"><strong>If an email fails</strong><p>The API never errors out because of email; it logs the failure and the student can press "Resend OTP". See the log with <code>sudo journalctl -u kanak-backend -n 100 | grep -A5 "Could not send email"</code>. Common causes: still in the sandbox, unverified sender domain, wrong SMTP region, or a wrong SMTP password.</p></div>
+<p>Optional: SES → Configuration sets → add one with SNS notifications for bounces and complaints so you can see addresses that bounce.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="razorpay">
+<h2><span class="num">11</span>Razorpay (live payments)</h2>
+<ol class="steps">
+  <li>Razorpay dashboard → switch to <b>Live mode</b> (needs completed KYC).</li>
+  <li><b>Account &amp; Settings → API Keys → Generate Key</b>. Copy the Key ID (<code>rzp_live_...</code>) and Key Secret.</li>
+  <li><b>Account &amp; Settings → Webhooks → Add New Webhook</b>:
+    <ul>
+      <li>URL: <code>https://api.kanakbeautyservice.com/api/v1/payments/razorpay/webhook</code></li>
+      <li>Secret: a new long random string (save it)</li>
+      <li>Events: <code>payment.authorized</code>, <code>payment.captured</code>, <code>payment.failed</code>, <code>order.paid</code></li>
+    </ul></li>
+  <li>Payment capture: <b>Automatic</b> (the backend also captures authorized payments itself, so either setting works).</li>
+  <li>Put the three values in the server <code>.env</code> (<code>RAZORPAY_KEY_ID</code>, <code>RAZORPAY_KEY_SECRET</code>, <code>RAZORPAY_WEBHOOK_SECRET</code>) with <code>PAYMENT_GATEWAY=razorpay</code>, then <code>sudo systemctl restart kanak-backend</code>.</li>
+</ol>
+<div class="note ok"><strong>How a purchase unlocks the course</strong><p>The student pays in the Razorpay popup → the website sends the signed result to <code>/payments/razorpay/verify</code> → the backend checks the signature and amount with Razorpay and activates the enrollment, places the student in an open batch and emails a confirmation. If the student closes the tab, the signed webhook does the same a moment later. Nobody has to approve anything by hand.</p></div>
+<p>First real payment: buy the cheapest course yourself with a real card or UPI, check it unlocks, then refund it from Admin → Payments.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="frontend">
+<h2><span class="num">12</span>Frontend (Cloudflare Workers)</h2>
+<h3>12.1 Point the website at the production API</h3>
+<p>Edit <code>.env.production</code> in the frontend repository. These values are built into the public website, so nothing here is secret.</p>
+<div class="cmd"><span class="where">File: kanak/.env.production</span><pre>VITE_API_BASE_URL=https://api.kanakbeautyservice.com/api/v1
+VITE_PUBLIC_SITE_URL=https://kanakbeautyservice.com
+VITE_PAYMENT_SANDBOX=false</pre></div>
+<div class="cmd"><span class="where">Your PC</span><pre>cd C:\Users\Dablu.Kumar\kanak
+git add .env.production
+git commit -m "Point website at production API"
+git push origin main</pre></div>
+<p>Cloudflare builds and deploys automatically (about 7 minutes). Watch it under Workers &amp; Pages → <code>kanak-beauty</code> → Deployments.</p>
+<div class="note warn"><strong>This switches the existing Cloudflare project to production</strong><p>From this push on, <code>kanak-beauty.dkyadav2905.workers.dev</code> also talks to the production API. If you still want a UAT website, create a second Worker connected to a <code>uat</code> branch whose <code>.env.production</code> points at the UAT API.</p></div>
+<h3>12.2 Attach the real domain</h3>
+<ol class="steps">
+  <li>Cloudflare → Workers &amp; Pages → <code>kanak-beauty</code> → <b>Settings → Domains &amp; Routes → Add → Custom domain</b> → <code>kanakbeautyservice.com</code>.</li>
+  <li>Repeat for <code>www.kanakbeautyservice.com</code>.</li>
+  <li>Cloudflare creates the DNS records and the HTTPS certificate itself.</li>
+  <li>Optional: Rules → Redirect rules → redirect <code>www</code> to the bare domain so everyone lands on one address.</li>
+</ol>
+<h3>12.3 Check</h3>
+<p>Open <code>https://kanakbeautyservice.com</code>, press <kbd>Ctrl+Shift+R</kbd>, and in DevTools → Network confirm the API calls go to <code>https://api.kanakbeautyservice.com/api/v1/...</code> with status 200 (no <i>mixed-content</i> or <i>CORS</i> errors).</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="uat">
+<h2><span class="num">13</span>Moving from UAT to production</h2>
+<p>UAT runs at <code>18.119.106.180</code> (<code>https://18-119-106-180.sslip.io</code>). Choose one option.</p>
+<h3>Option A (recommended): start clean</h3>
+<p>UAT holds test students, test payments and sample courses. Production starts empty and the admin re-creates the real trainers, courses, batches, hero slides, certificate settings and Refer &amp; Earn rules. Nothing to copy; continue with section 14.</p>
+<h3>Option B: copy the UAT data</h3>
+<p>Use only if UAT already holds real content you want to keep. Copy the database <b>and</b> the uploaded files together.</p>
+<div class="cmd"><span class="where">UAT server</span><pre>cd ~/apps/kanak-beauty-backend && set -a; . ./.env; set +a
+MYSQL_PWD="$DB_PASSWORD" mysqldump --single-transaction --routines -u "$DB_USER" -h 127.0.0.1 "$DB_NAME" | gzip &gt; ~/uat-db.sql.gz
+tar czf ~/uat-media.tgz -C ~/apps/kanak-beauty-backend media
+ls -lh ~/uat-db.sql.gz ~/uat-media.tgz</pre></div>
+<div class="cmd"><span class="where">Your PC (copies via your machine)</span><pre>scp -i "$HOME/Desktop/kanak-uat-key.pem"  ubuntu@18.119.106.180:~/uat-db.sql.gz ubuntu@18.119.106.180:~/uat-media.tgz .
+scp -i "$HOME/Desktop/kanak-prod-key.pem" uat-db.sql.gz uat-media.tgz ubuntu@api.kanakbeautyservice.com:~/</pre></div>
+<div class="cmd"><span class="where">Production server</span><pre>sudo systemctl stop kanak-backend
+cd ~/apps/kanak-beauty-backend && set -a; . ./.env; set +a
+gunzip -c ~/uat-db.sql.gz | MYSQL_PWD="$DB_PASSWORD" mariadb -u "$DB_USER" -h 127.0.0.1 "$DB_NAME"
+tar xzf ~/uat-media.tgz -C ~/apps/kanak-beauty-backend
+bash scripts/uat_update.sh        # applies any newer migrations and restarts</pre></div>
+<p>Then remove test data that should not be live, as needed: test students, the sandbox payments (<code>gateway_provider=sandbox</code>) and their enrollments. To wipe all rows but keep admin users instead, use <code>bash scripts/purge_db.sh --dry-run</code> first, then <code>bash scripts/purge_db.sh --yes --keep-admins</code> (it takes a backup first).</p>
+<div class="note danger"><strong>Never copy the UAT <code>.env</code></strong><p>Production has its own secrets, domain, Razorpay live keys and SES credentials. Copying UAT data keeps its users' passwords working, which is expected; the JWT key change logs everyone out once.</p></div>
+<h3>Retire UAT afterwards</h3>
+<p>Once production is stable: stop the UAT instance (EC2 → Instance state → Stop) to save cost, or keep it for testing behind its own website. Release its Elastic IP if you terminate it.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="golive">
+<h2><span class="num">14</span>Go-live checklist</h2>
+<ul class="check">
+  <li><code>curl https://api.kanakbeautyservice.com/api/v1/health</code> returns <code>{"status": "ok"}</code>.</li>
+  <li><code>http://api.kanakbeautyservice.com</code> redirects to <code>https://</code>.</li>
+  <li><code>.env</code> has <code>DJANGO_SETTINGS_MODULE=config.settings.production</code> and <code>chmod 600</code>.</li>
+  <li>Admin can log in at <code>https://kanakbeautyservice.com/login</code>.</li>
+  <li>Admin creates a trainer, a course (publish it), a batch with class time and Meet link, and a hero slide; the home page and footer show them.</li>
+  <li>New student registers with a real email and receives the OTP from SES.</li>
+  <li>"Forgot password" email arrives and the link opens <code>https://kanakbeautyservice.com/reset-password?token=...</code>.</li>
+  <li>A real Razorpay payment unlocks the course, the student lands in a batch, the confirmation email arrives, and Admin → Payments shows it as Paid. Then refund it.</li>
+  <li>Razorpay dashboard → Webhooks shows recent deliveries with status 200.</li>
+  <li>Refer &amp; Earn: Admin → Refer &amp; Earn → Course rules are set as intended.</li>
+  <li>Certificate settings (template, signatures) are set and a test certificate looks right.</li>
+  <li>Daily backups run (section 16) and one restore was tested.</li>
+  <li>EC2 termination protection is on; AWS billing alarm created (Billing → Budgets).</li>
+  <li>The footer contact address/phone and the policy pages contain real details.</li>
+</ul>
+</section>
+
+<!-- ===================================================================== -->
+<section id="ops">
+<h2><span class="num">15</span>Day-to-day operations</h2>
+<h3>Release a backend update</h3>
+<div class="cmd"><span class="where">Your PC</span><pre>cd C:\Users\Dablu.Kumar\kanak\kanak-beauty-backend
+git add -A && git commit -m "Describe the change" && git push origin main</pre></div>
+<div class="cmd"><span class="where">Server</span><pre>cd ~/apps/kanak-beauty-backend && bash scripts/uat_update.sh</pre></div>
+<h3>Release a frontend update</h3>
+<div class="cmd"><span class="where">Your PC</span><pre>cd C:\Users\Dablu.Kumar\kanak
+git add -A && git commit -m "Describe the change" && git push origin main
+# Cloudflare deploys automatically; users press Ctrl+Shift+R to see it at once</pre></div>
+<h3>Useful server commands</h3>
+<div class="table-wrap"><table>
+  <tr><th>Task</th><th>Command</th></tr>
+  <tr><td>API status</td><td><code>systemctl status kanak-backend --no-pager</code></td></tr>
+  <tr><td>Live API log</td><td><code>sudo journalctl -u kanak-backend -f</code></td></tr>
+  <tr><td>Last 200 log lines</td><td><code>sudo journalctl -u kanak-backend -n 200 --no-pager</code></td></tr>
+  <tr><td>Restart API (after editing .env)</td><td><code>sudo systemctl restart kanak-backend</code></td></tr>
+  <tr><td>Nginx errors</td><td><code>sudo tail -n 100 /var/log/nginx/error.log</code></td></tr>
+  <tr><td>Test &amp; reload Nginx</td><td><code>sudo nginx -t &amp;&amp; sudo systemctl reload nginx</code></td></tr>
+  <tr><td>Certificate expiry</td><td><code>sudo certbot certificates</code></td></tr>
+  <tr><td>Disk / memory</td><td><code>df -h /</code> · <code>free -h</code></td></tr>
+  <tr><td>Database shell</td><td><code>sudo mariadb kanak_academy</code></td></tr>
+  <tr><td>Django shell</td><td><code>cd ~/apps/kanak-beauty-backend &amp;&amp; set -a; . ./.env; set +a &amp;&amp; .venv/bin/python manage.py shell</code></td></tr>
+  <tr><td>Another admin</td><td><code>.venv/bin/python manage.py create_admin --email ... --name "..." --password '...'</code> (after loading .env as above)</td></tr>
+  <tr><td>Close ended batches now</td><td><code>sudo systemctl start kanak-complete-batches.service</code></td></tr>
+  <tr><td>Deployed commit</td><td><code>git -C ~/apps/kanak-beauty-backend log --oneline -1</code></td></tr>
+</table></div>
+<h3>OS updates</h3>
+<div class="cmd"><span class="where">Server (monthly, quiet hours)</span><pre>sudo apt update && sudo apt -y upgrade
+[ -f /var/run/reboot-required ] && sudo reboot   # everything restarts on its own after a reboot</pre></div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="backup">
+<h2><span class="num">16</span>Backups &amp; restore</h2>
+<h3>Daily database + media backup (14 days kept)</h3>
+<div class="cmd"><span class="where">Server</span><pre>sudo tee /usr/local/bin/kanak-backup &gt;/dev/null &lt;&lt;'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+APP=/home/ubuntu/apps/kanak-beauty-backend
+OUT=/home/ubuntu/backups
+mkdir -p "$OUT"
+set -a; . "$APP/.env"; set +a
+STAMP=$(date +%Y%m%d-%H%M)
+MYSQL_PWD="$DB_PASSWORD" mysqldump --single-transaction --routines -u "$DB_USER" -h "$DB_HOST" "$DB_NAME" | gzip &gt; "$OUT/db-$STAMP.sql.gz"
+tar czf "$OUT/media-$STAMP.tgz" -C "$APP" media
+find "$OUT" -type f -mtime +14 -delete
+SH
+sudo chmod 755 /usr/local/bin/kanak-backup
+( crontab -l 2&gt;/dev/null; echo "15 2 * * * /usr/local/bin/kanak-backup &gt;&gt; /home/ubuntu/backups/backup.log 2&gt;&amp;1" ) | crontab -
+/usr/local/bin/kanak-backup && ls -lh ~/backups</pre></div>
+<h3>Off-server copies (strongly recommended)</h3>
+<ol class="steps">
+  <li><b>EBS snapshots</b>: EC2 → Lifecycle Manager → Create policy → target the <code>kanak-prod</code> volume, daily, keep 7. Protects against losing the whole server.</li>
+  <li><b>S3 copy</b>: create a private bucket, for example <code>kanak-prod-backups</code>; IAM → Roles → create a role for EC2 allowing <code>s3:PutObject</code> on that bucket; attach it to the instance (Actions → Security → Modify IAM role). Then:</li>
+</ol>
+<div class="cmd"><span class="where">Server</span><pre>sudo snap install aws-cli --classic
+( crontab -l; echo "45 2 * * * aws s3 sync /home/ubuntu/backups s3://kanak-prod-backups/ --exclude '*.log'" ) | crontab -</pre></div>
+<h3>Restore</h3>
+<div class="cmd"><span class="where">Server</span><pre>sudo systemctl stop kanak-backend
+cd ~/apps/kanak-beauty-backend && set -a; . ./.env; set +a
+gunzip -c ~/backups/db-YYYYMMDD-HHMM.sql.gz | MYSQL_PWD="$DB_PASSWORD" mariadb -u "$DB_USER" -h 127.0.0.1 "$DB_NAME"
+tar xzf ~/backups/media-YYYYMMDD-HHMM.tgz -C ~/apps/kanak-beauty-backend
+sudo systemctl start kanak-backend</pre></div>
+<div class="note danger"><strong><code>scripts/purge_db.sh</code> deletes every row</strong><p>It is meant for clearing test data. On production run it only on purpose, and only after a fresh backup (it makes one itself unless <code>--no-backup</code> is given).</p></div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="trouble">
+<h2><span class="num">17</span>Troubleshooting</h2>
+<div class="table-wrap"><table>
+  <tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr>
+  <tr><td>Website shows no data; DevTools says <i>blocked:mixed-content</i></td><td>Website built with an <code>http://</code> API URL</td><td><code>VITE_API_BASE_URL</code> must start with <code>https://</code>; push again.</td></tr>
+  <tr><td>Requests to <code>localhost:8000</code></td><td>Old build in the browser, or <code>.env.production</code> not committed</td><td>Ctrl+Shift+R; check the file is on GitHub <code>main</code>.</td></tr>
+  <tr><td>CORS error in the browser console</td><td>Website origin missing from <code>CORS_ALLOWED_ORIGINS</code></td><td>Add the exact origin (with <code>https://</code>, no trailing slash) and restart the API.</td></tr>
+  <tr><td>API returns 400 "Bad Request" for every call</td><td>Host not in <code>DJANGO_ALLOWED_HOSTS</code></td><td>Add <code>api.kanakbeautyservice.com</code>; restart.</td></tr>
+  <tr><td>502 Bad Gateway</td><td>Gunicorn not running</td><td><code>sudo journalctl -u kanak-backend -n 100</code>. A <code>RuntimeError</code> at start lists the missing secret.</td></tr>
+  <tr><td>Deploy script fails at <code>. ./.env</code></td><td>A value with spaces or &lt; &gt; is unquoted</td><td>Wrap it in double quotes (section 6).</td></tr>
+  <tr><td>No OTP email</td><td>SES sandbox, unverified domain, wrong SMTP credentials</td><td>Section 10; check the "Could not send email" log line.</td></tr>
+  <tr><td>Paid in Razorpay, course still locked</td><td>Webhook URL or secret wrong, or checkout verify failed</td><td>Razorpay → Webhooks → delivery log; then Admin → Payments → Reconcile on that payment.</td></tr>
+  <tr><td>Server will not start: "PAYMENT_GATEWAY=razorpay needs ..."</td><td>A Razorpay value is empty</td><td>Fill all three Razorpay values in <code>.env</code>.</td></tr>
+  <tr><td>Course thumbnails 404</td><td>Nginx cannot read the home folder</td><td><code>sudo chmod 711 /home/ubuntu</code>; check the <code>alias</code> path.</td></tr>
+  <tr><td>Certificate renewal failed</td><td>Port 80 closed or DNS changed</td><td>Open port 80 in the security group; <code>sudo certbot renew --dry-run</code>.</td></tr>
+  <tr><td>Server slow or killed processes</td><td>Out of memory</td><td><code>free -h</code>; check swap is on; lower <code>GUNICORN_WORKERS</code> or resize the instance.</td></tr>
+</table></div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="rollback">
+<h2><span class="num">18</span>Rollback</h2>
+<h3>Backend: go back to the previous commit</h3>
+<div class="cmd"><span class="where">Server</span><pre>cd ~/apps/kanak-beauty-backend
+git log --oneline -5                       # find the last good commit, e.g. b0aab36
+/usr/local/bin/kanak-backup                # safety backup first
+git reset --hard b0aab36
+.venv/bin/pip install -q -r requirements.txt
+sudo systemctl restart kanak-backend</pre></div>
+<p>Do not run <code>scripts/uat_update.sh</code> while rolled back; it would pull <code>main</code> again. Fix or revert on GitHub (<code>git revert &lt;bad-commit&gt;</code> on your PC, push), then deploy normally.</p>
+<div class="note warn"><strong>If the bad release added a database migration</strong><p>Rolling the code back does not undo the migration. Usually that is harmless (new columns are ignored by older code). If not, restore the database backup taken before the release (section 16).</p></div>
+<h3>Frontend</h3>
+<p>Cloudflare → Workers &amp; Pages → <code>kanak-beauty</code> → Deployments → choose the last good deployment → <b>Rollback</b> (or "Promote" it). It switches instantly.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="envref">
+<h2>Appendix: backend .env reference</h2>
+<div class="table-wrap"><table>
+  <tr><th>Variable</th><th>Production value</th><th>Notes</th></tr>
+  <tr><td><code>DJANGO_SETTINGS_MODULE</code></td><td><code>config.settings.production</code></td><td>UAT uses <code>config.settings.uat</code> (no forced HTTPS, sandbox allowed).</td></tr>
+  <tr><td><code>DJANGO_SECRET_KEY</code></td><td>random</td><td>Required.</td></tr>
+  <tr><td><code>DJANGO_ALLOWED_HOSTS</code></td><td><code>api.kanakbeautyservice.com</code></td><td>Comma-separated. The first one is used by the deploy health check.</td></tr>
+  <tr><td><code>LOG_LEVEL</code>, <code>TIME_ZONE</code></td><td><code>INFO</code>, <code>Asia/Kolkata</code></td><td></td></tr>
+  <tr><td><code>DB_NAME</code>, <code>DB_USER</code>, <code>DB_PASSWORD</code>, <code>DB_HOST</code>, <code>DB_PORT</code></td><td>see section 5</td><td><code>DB_CONN_MAX_AGE=60</code> reuses connections.</td></tr>
+  <tr><td><code>JWT_SIGNING_KEY</code></td><td>random</td><td>Changing it logs everyone out.</td></tr>
+  <tr><td><code>JWT_ACCESS_MINUTES</code>, <code>JWT_REFRESH_DAYS</code></td><td><code>30</code>, <code>7</code></td><td></td></tr>
+  <tr><td><code>PUBLIC_SITE_URL</code></td><td><code>https://kanakbeautyservice.com</code></td><td>Used in reset-password, referral and certificate links.</td></tr>
+  <tr><td><code>CORS_ALLOWED_ORIGINS</code></td><td>website origins</td><td>Exact, with <code>https://</code>, no trailing slash.</td></tr>
+  <tr><td><code>CSRF_TRUSTED_ORIGINS</code></td><td>website origins + API origin</td><td></td></tr>
+  <tr><td><code>SECURE_SSL_REDIRECT</code>, <code>SECURE_HSTS_SECONDS</code></td><td>defaults (<code>True</code>, one year)</td><td>Leave unset in production.</td></tr>
+  <tr><td><code>PAYMENT_GATEWAY</code></td><td><code>razorpay</code></td><td><code>sandbox</code> is refused in production.</td></tr>
+  <tr><td><code>PAYMENT_WEBHOOK_SECRET</code></td><td>random</td><td>Required by the production settings.</td></tr>
+  <tr><td><code>RAZORPAY_KEY_ID</code>, <code>RAZORPAY_KEY_SECRET</code>, <code>RAZORPAY_WEBHOOK_SECRET</code></td><td>from Razorpay</td><td>All three required with <code>razorpay</code>.</td></tr>
+  <tr><td><code>RAZORPAY_CHECKOUT_NAME</code></td><td><code>"Kanak Beauty Academy"</code></td><td>Shown in the payment popup.</td></tr>
+  <tr><td><code>PAYMENT_PENDING_REUSE_MINUTES</code></td><td><code>30</code></td><td>Re-opening checkout reuses the same order within this time.</td></tr>
+  <tr><td><code>EMAIL_BACKEND</code></td><td><code>django.core.mail.backends.smtp.EmailBackend</code></td><td>The default (console) only prints emails to the log.</td></tr>
+  <tr><td><code>EMAIL_HOST</code>, <code>EMAIL_PORT</code>, <code>EMAIL_USE_TLS</code></td><td><code>email-smtp.us-east-2.amazonaws.com</code>, <code>587</code>, <code>True</code></td><td>The host must match the SES region.</td></tr>
+  <tr><td><code>EMAIL_HOST_USER</code>, <code>EMAIL_HOST_PASSWORD</code></td><td>SES SMTP credentials</td><td>Not your AWS login.</td></tr>
+  <tr><td><code>DEFAULT_FROM_EMAIL</code></td><td><code>"Kanak Beauty Academy &lt;no-reply@kanakbeautyservice.com&gt;"</code></td><td>Quoted. Must be on the SES-verified domain.</td></tr>
+  <tr><td><code>EMAIL_TIMEOUT</code></td><td><code>10</code></td><td>Seconds.</td></tr>
+  <tr><td><code>OTP_TTL_MINUTES</code>, <code>PASSWORD_RESET_TTL_MINUTES</code></td><td><code>15</code>, <code>30</code></td><td></td></tr>
+  <tr><td><code>LIVE_PROVIDER</code>, <code>SIGNED_URL_TTL_MINUTES</code></td><td><code>internal</code>, <code>30</code></td><td>Signed links for recordings and materials.</td></tr>
+  <tr><td><code>CERTIFICATE_NUMBER_PREFIX</code>, <code>ORDER_ID_PREFIX</code></td><td><code>KBA</code>, <code>KBA-ORD</code></td><td>Do not change after go-live.</td></tr>
+  <tr><td><code>GUNICORN_BIND</code>, <code>GUNICORN_WORKERS</code></td><td>set in the systemd unit</td><td>Section 7.</td></tr>
+</table></div>
+<h3>Frontend build variables (<code>kanak/.env.production</code>)</h3>
+<table>
+  <tr><th>Variable</th><th>Production value</th></tr>
+  <tr><td><code>VITE_API_BASE_URL</code></td><td><code>https://api.kanakbeautyservice.com/api/v1</code></td></tr>
+  <tr><td><code>VITE_PUBLIC_SITE_URL</code></td><td><code>https://kanakbeautyservice.com</code></td></tr>
+  <tr><td><code>VITE_PAYMENT_SANDBOX</code></td><td><code>false</code></td></tr>
+</table>
+</section>
+</main>
+</div>
+
+<script>
+  // Copy buttons on every command block.
+  document.querySelectorAll('.cmd').forEach(function (block) {
+    var pre = block.querySelector('pre');
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function () {
+      var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(pre.innerText).then(done, function () { btn.textContent = 'Select & copy'; });
+      } else {
+        var range = document.createRange(); range.selectNodeContents(pre);
+        var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+        try { document.execCommand('copy'); done(); } catch (e) { btn.textContent = 'Select & copy'; }
+      }
+    });
+    block.appendChild(btn);
+  });
+
+  // Theme toggle, remembered per browser when storage is available.
+  (function () {
+    var root = document.documentElement;
+    try { var saved = localStorage.getItem('kanak-runbook-theme'); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+    document.getElementById('themeToggle').addEventListener('click', function () {
+      var dark = root.getAttribute('data-theme') === 'dark' ||
+        (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      var next = dark ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('kanak-runbook-theme', next); } catch (e) {}
+    });
+  })();
+</script>
+</body>
+</html>

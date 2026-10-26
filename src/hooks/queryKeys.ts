@@ -9,6 +9,7 @@ export const queryKeys = {
     trainers: ['catalog', 'trainers'] as const,
     stats: ['catalog', 'stats'] as const,
     heroSlides: ['catalog', 'hero-slides'] as const,
+    homeVideo: ['catalog', 'home-video'] as const,
     verify: (number: string) => ['catalog', 'verify', number] as const,
     referralCode: (code: string) => ['catalog', 'referral-code', code] as const,
   },
@@ -53,5 +54,6 @@ export const queryKeys = {
     referralConfig: ['admin', 'referrals', 'config'] as const,
     referralCourses: ['admin', 'referrals', 'courses'] as const,
     heroSlides: ['admin', 'hero-slides'] as const,
+    homeVideo: ['admin', 'home-video'] as const,
   },
 };

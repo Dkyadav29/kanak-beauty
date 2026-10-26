@@ -59,6 +59,7 @@ const AdminCertificateSettingsPage = lazy(() => import('@/pages/admin/AdminCerti
 const AdminAuditLogsPage = lazy(() => import('@/pages/admin/AdminAuditLogsPage'));
 const AdminReferralsPage = lazy(() => import('@/pages/admin/AdminReferralsPage'));
 const AdminHeroSlidesPage = lazy(() => import('@/pages/admin/AdminHeroSlidesPage'));
+const AdminHomeVideoPage = lazy(() => import('@/pages/admin/AdminHomeVideoPage'));
 
 export const routes: RouteObject[] = [
   {
@@ -157,6 +158,7 @@ export const routes: RouteObject[] = [
       { path: 'audit-logs', element: <RequirePermission permission="audit:read"><AdminAuditLogsPage /></RequirePermission> },
       { path: 'referrals', element: <RequirePermission permission="referrals:manage"><AdminReferralsPage /></RequirePermission> },
       { path: 'hero-slides', element: <RequirePermission permission="content:manage"><AdminHeroSlidesPage /></RequirePermission> },
+      { path: 'home-video', element: <RequirePermission permission="content:manage"><AdminHomeVideoPage /></RequirePermission> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
