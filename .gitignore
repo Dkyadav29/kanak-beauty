@@ -7,3 +7,12 @@ coverage
 backend
 # Separate git repo (github.com/Dkyadav29/kanak-beauty-backend)
 kanak-beauty-backend
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
+
+# TypeScript incremental build info
+*.tsbuildinfo
