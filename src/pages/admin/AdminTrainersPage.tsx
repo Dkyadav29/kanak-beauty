@@ -22,7 +22,6 @@ const parseSkills = (raw: string) => {
 
 const schema = z.object({
   name: z.string().trim().min(2, 'At least 2 characters').max(120),
-  title: z.string().trim().min(2, 'e.g. Senior Makeup Educator').max(120),
   mobile: z.string().trim().regex(MOBILE_RE, 'Enter a valid mobile number (10 to 15 digits, optional +)'),
   email: z.union([z.literal(''), z.string().trim().email('Enter a valid email')]),
   skills: z.string().refine((v) => parseSkills(v).length > 0, 'Add at least one skill'),
@@ -31,11 +30,10 @@ const schema = z.object({
   isActive: z.boolean(),
 });
 type FormValues = z.infer<typeof schema>;
-const FIELD_KEYS: Array<keyof FormValues> = ['name', 'title', 'mobile', 'email', 'bio', 'avatarUrl', 'isActive'];
+const FIELD_KEYS: Array<keyof FormValues> = ['name', 'mobile', 'email', 'bio', 'avatarUrl', 'isActive'];
 
 const toValues = (t: AdminTrainer | null): FormValues => ({
   name: t?.name ?? '',
-  title: t?.title ?? '',
   mobile: t?.mobile ?? '',
   email: t?.email ?? '',
   skills: t?.specialities.join(', ') ?? '',
@@ -44,9 +42,9 @@ const toValues = (t: AdminTrainer | null): FormValues => ({
   isActive: t?.isActive ?? true,
 });
 
+// No title: the form no longer asks for one, and leaving it out keeps any existing title.
 const toPayload = (v: FormValues): TrainerUpsertRequest => ({
   name: v.name.trim(),
-  title: v.title.trim(),
   mobile: v.mobile.trim(),
   email: v.email.trim(),
   bio: v.bio.trim(),
@@ -58,7 +56,6 @@ const toPayload = (v: FormValues): TrainerUpsertRequest => ({
 /** Same body the API needs on every PUT, built from an existing row (used by the activate/deactivate action). */
 const rowPayload = (t: AdminTrainer, isActive: boolean): TrainerUpsertRequest => ({
   name: t.name,
-  title: t.title,
   mobile: t.mobile,
   email: t.email,
   bio: t.bio,
@@ -116,7 +113,7 @@ const TrainerFormDialog = ({ open, trainer, onClose }: { open: boolean; trainer:
       onClose={onClose}
       size="lg"
       title={trainer ? 'Edit trainer' : 'Add trainer'}
-      description="Mobile number and email are visible to admins only. Name, title, skills, bio and photo appear on the public website."
+      description="Mobile number and email are visible to admins only. Name, skills, bio and photo appear on the public website."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={isSubmitting}>
@@ -136,9 +133,6 @@ const TrainerFormDialog = ({ open, trainer, onClose }: { open: boolean; trainer:
       <form id={formId} onSubmit={handleSubmit(submit)} className="grid gap-4 sm:grid-cols-2" noValidate>
         <FormField label="Full name" htmlFor="tr-name" error={errors.name?.message} required>
           <Input id="tr-name" autoComplete="off" invalid={!!errors.name} {...register('name')} />
-        </FormField>
-        <FormField label="Title" htmlFor="tr-title" error={errors.title?.message} hint="Printed under the signature on certificates, e.g. Hairstyle Trainer & Educator" required>
-          <Input id="tr-title" invalid={!!errors.title} {...register('title')} />
         </FormField>
         <FormField label="Mobile number" htmlFor="tr-mobile" error={errors.mobile?.message} required>
           <Input id="tr-mobile" type="tel" inputMode="tel" placeholder="+91 98765 43210" invalid={!!errors.mobile} {...register('mobile')} />

@@ -27,7 +27,8 @@ export interface AdminTrainer extends Trainer {
 /** POST /admin/trainers, PUT /admin/trainers/{id}. ``isActive`` omitted on update keeps the current value. */
 export interface TrainerUpsertRequest {
   name: string;
-  title: string;
+  /** Optional; omitted on update keeps the current title. */
+  title?: string;
   mobile: string;
   email: string;
   bio: string;

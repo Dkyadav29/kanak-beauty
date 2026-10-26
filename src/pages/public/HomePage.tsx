@@ -38,38 +38,65 @@ const HomePage = () => {
     () => (heroSlides.data ?? []).map((s) => ({ id: s.id, src: resolveApiUrl(s.imageUrl), alt: s.alt, eyebrow: s.eyebrow, caption: s.caption, focus: s.focus })),
     [heroSlides.data],
   );
-  const heroFrame = 'aspect-[4/3] rounded-none shadow-none sm:aspect-[16/9] lg:aspect-[21/9] lg:max-h-[80vh]';
+  // Fits the screen whatever the photo size: a viewport-based height, cropped with object-cover + focus.
+  const heroFrame = 'h-[560px] sm:h-[600px] lg:h-[min(80vh,760px)]';
+  const hasHero = heroSlides.isLoading || slides.length > 0;
 
   return (
     <>
-      {/* Hero: full-width image carousel banner. Slides are managed by admins (Admin > Hero Slider). */}
+      {/* Hero: rounded, inset image carousel. Slides are managed by admins (Admin > Hero Slider). */}
       <section className="relative">
-        {heroSlides.isLoading ? (
-          <Skeleton className={`w-full rounded-none ${heroFrame}`} />
-        ) : slides.length ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
-            <HeroSlider slides={slides} intervalMs={2000} className={heroFrame} />
-          </motion.div>
+        {hasHero ? (
+          <div className="px-3 pt-3 sm:px-5 sm:pt-5">
+            {heroSlides.isLoading ? (
+              <Skeleton className={`w-full rounded-[2rem] ${heroFrame}`} />
+            ) : (
+              <motion.div initial={{ opacity: 0, scale: 0.985 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, ease: 'easeOut' }}>
+                <HeroSlider
+                  slides={slides}
+                  intervalMs={6000}
+                  className={heroFrame}
+                  reserveBottom
+                  actions={
+                    <>
+                      <LinkButton to="/courses" size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                        Explore courses
+                      </LinkButton>
+                      <LinkButton to="/live-classes" size="lg" variant="outline" className="border-white/40 bg-white/10 text-white backdrop-blur-md hover:border-white hover:bg-white/20 hover:text-white" leftIcon={<PlayCircle className="h-4 w-4" />}>
+                        Live classes
+                      </LinkButton>
+                    </>
+                  }
+                />
+              </motion.div>
+            )}
+          </div>
         ) : null}
 
-        {/* Trust stats strip under the banner */}
-        <div className="container-x mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {/* Trust stats: one floating card overlapping the banner's lower edge. */}
+        <div className={`container-x relative z-10 ${hasHero ? '-mt-14 sm:-mt-16' : 'mt-8'}`}>
           {stats.isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <div key={i} className="card h-20 animate-pulse" />)
+            <div className="h-24 animate-pulse rounded-3xl bg-white shadow-lift" />
           ) : stats.data ? (
-            [
-              { label: 'Courses offered', value: stats.data.coursesOffered, icon: GraduationCap },
-              { label: 'Enrolled students', value: stats.data.enrolledStudents, icon: Users },
-              { label: 'Expert trainers', value: stats.data.expertTrainers, icon: Sparkles },
-              { label: 'Certificates issued', value: stats.data.certificatesIssued, icon: Award },
-            ].map((s) => (
-              <div key={s.label} className="card relative px-4 py-3.5">
-                <s.icon className="h-4 w-4 text-rose-600" />
-                <p className="mt-1.5 font-display text-2xl font-semibold text-charcoal-900">{s.value}</p>
-                <p className="text-xs text-charcoal-500">{s.label}</p>
-                {stats.data?.isDemoData ? <DemoBadge className="absolute right-2 top-2" /> : null}
-              </div>
-            ))
+            <div className="grid grid-cols-2 overflow-hidden rounded-3xl border border-ivory-200 bg-white/95 shadow-lift backdrop-blur sm:grid-cols-4">
+              {[
+                { label: 'Courses offered', value: stats.data.coursesOffered, icon: GraduationCap },
+                { label: 'Enrolled students', value: stats.data.enrolledStudents, icon: Users },
+                { label: 'Expert trainers', value: stats.data.expertTrainers, icon: Sparkles },
+                { label: 'Certificates issued', value: stats.data.certificatesIssued, icon: Award },
+              ].map((s, i) => (
+                <div key={s.label} className={`relative flex items-center gap-3 px-5 py-4 sm:px-6 sm:py-5 ${i % 2 ? 'border-l border-ivory-200' : ''} ${i > 1 ? 'border-t border-ivory-200 sm:border-t-0' : ''} ${i === 2 ? 'sm:border-l' : ''}`}>
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                    <s.icon className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-display text-2xl font-semibold leading-none text-charcoal-900 sm:text-3xl">{s.value}</p>
+                    <p className="mt-1 truncate text-xs text-charcoal-500">{s.label}</p>
+                  </div>
+                  {stats.data?.isDemoData ? <DemoBadge className="absolute right-2 top-2" /> : null}
+                </div>
+              ))}
+            </div>
           ) : null}
         </div>
       </section>

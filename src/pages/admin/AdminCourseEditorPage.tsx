@@ -208,7 +208,7 @@ const CourseDetailsForm = ({ course }: { course?: Course }) => {
                   <option value="">No trainer yet</option>
                   {trainers.data?.filter((t) => t.isActive || t.id === course?.trainer?.id).map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.name} — {t.title}
+                      {t.title ? `${t.name} — ${t.title}` : t.name}
                     </option>
                   ))}
                 </Select>

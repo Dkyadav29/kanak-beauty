@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ImageWithFallback } from '@/components/ui';
@@ -34,18 +34,25 @@ interface HeroSliderProps {
   slides: HeroSlide[];
   /** Milliseconds between automatic advances. 0 disables autoplay. */
   intervalMs?: number;
+  /** Call-to-action buttons shown on every slide, under the caption. */
+  actions?: ReactNode;
   className?: string;
+  /** Keep the bottom strip clear for a card that overlaps the banner's lower edge. */
+  reserveBottom?: boolean;
 }
 
 const SWIPE_THRESHOLD_PX = 60;
 
+const glassButton =
+  'flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white';
+
 /**
- * Horizontal carousel for the public landing hero. Slides move sideways on a
- * track, autoplay (paused while hovered/focused), support swipe/drag, arrow
- * keys, visible prev/next buttons, dots and a counter. With reduced motion the
- * track jumps instead of animating.
+ * Full-bleed carousel for the public landing hero. Slides move sideways on a track,
+ * the active photo slowly zooms out, and the caption block (eyebrow, headline, actions)
+ * fades in per slide. Autoplay pauses while hovered/focused; swipe/drag, arrow keys,
+ * prev/next buttons and progress bars all navigate. Reduced motion disables animation.
  */
-export const HeroSlider = ({ slides, intervalMs = 5000, className }: HeroSliderProps) => {
+export const HeroSlider = ({ slides, intervalMs = 6000, actions, className, reserveBottom = false }: HeroSliderProps) => {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const reduceMotion = useReducedMotion();
@@ -62,10 +69,12 @@ export const HeroSlider = ({ slides, intervalMs = 5000, className }: HeroSliderP
   }, [paused, intervalMs, count]);
 
   if (count === 0) return null;
+  const active = slides[index];
+  const animateProgress = !paused && !reduceMotion && intervalMs > 0;
 
   return (
     <div
-      className={cn('group relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-charcoal-900 shadow-lift sm:aspect-[5/6]', className)}
+      className={cn('group relative overflow-hidden rounded-[2rem] bg-charcoal-900 shadow-lift', className)}
       role="region"
       aria-roledescription="carousel"
       aria-label="Academy highlights"
@@ -83,7 +92,7 @@ export const HeroSlider = ({ slides, intervalMs = 5000, className }: HeroSliderP
       <motion.div
         className="flex h-full w-full touch-pan-y"
         animate={{ x: `${-index * 100}%` }}
-        transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 220, damping: 32 }}
+        transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 200, damping: 34 }}
         drag={count > 1 ? 'x' : false}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.15}
@@ -91,60 +100,71 @@ export const HeroSlider = ({ slides, intervalMs = 5000, className }: HeroSliderP
           if (info.offset.x < -SWIPE_THRESHOLD_PX) next();
           else if (info.offset.x > SWIPE_THRESHOLD_PX) prev();
         }}
-        aria-live="polite"
       >
         {slides.map((slide, i) => (
           <div
             key={slide.id ?? slide.src}
-            className="relative h-full w-full shrink-0 select-none"
+            className="relative h-full w-full shrink-0 select-none overflow-hidden"
             role="group"
             aria-roledescription="slide"
             aria-label={`Slide ${i + 1} of ${count}`}
             aria-hidden={i !== index}
           >
-            <ImageWithFallback
-              src={slide.src}
-              alt={slide.alt}
-              className={cn('pointer-events-none h-full w-full object-cover', FOCUS_CLASS[slide.focus ?? 'center'])}
-              fallbackLabel="Kanak Academy"
-              loading={Math.abs(i - index) <= 1 ? 'eager' : 'lazy'}
-            />
-            {slide.eyebrow || slide.caption ? (
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal-900/85 via-charcoal-900/35 to-transparent pb-16 pt-24 text-white sm:pb-20">
-                <div className="container-x">
-                  {slide.eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-300">{slide.eyebrow}</p> : null}
-                  {slide.caption ? <p className="mt-1 max-w-2xl font-display text-2xl font-semibold sm:text-3xl lg:text-4xl">{slide.caption}</p> : null}
-                </div>
-              </div>
-            ) : null}
+            {/* Slow "Ken Burns" zoom-out on the active slide. */}
+            <motion.div
+              className="h-full w-full"
+              initial={false}
+              animate={{ scale: i === index && !reduceMotion ? 1 : 1.08 }}
+              transition={{ duration: reduceMotion ? 0 : (intervalMs || 6000) / 1000 + 1.5, ease: 'easeOut' }}
+            >
+              <ImageWithFallback
+                src={slide.src}
+                alt={slide.alt}
+                className={cn('pointer-events-none h-full w-full object-cover', FOCUS_CLASS[slide.focus ?? 'center'])}
+                fallbackLabel="Kanak Beauty Service"
+                loading={Math.abs(i - index) <= 1 ? 'eager' : 'lazy'}
+              />
+            </motion.div>
           </div>
         ))}
       </motion.div>
 
+      {/* Readability: dark from the bottom on phones, from the left on wider screens. */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-charcoal-900/90 via-charcoal-900/40 to-charcoal-900/10 sm:bg-gradient-to-r sm:from-charcoal-900/85 sm:via-charcoal-900/45 sm:to-transparent" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-charcoal-900/60 to-transparent" aria-hidden />
+
+      {/* Caption block */}
+      <div className={cn('absolute inset-0 flex items-end sm:items-center', reserveBottom && 'sm:pb-12')}>
+        <div className={cn('w-full px-6 sm:px-12 sm:pb-0 lg:px-16', reserveBottom ? 'pb-32' : 'pb-24')}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active.id ?? active.src}
+              initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: -10 }}
+              transition={{ duration: 0.45, ease: 'easeOut' }}
+              className="max-w-2xl text-white"
+              aria-live="polite"
+            >
+              {active.eyebrow ? (
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-gold-200 backdrop-blur-md">
+                  <span className="h-1.5 w-1.5 rounded-full bg-gold-300" aria-hidden />
+                  {active.eyebrow}
+                </span>
+              ) : null}
+              {active.caption ? (
+                <h2 className="mt-4 font-display text-3xl font-semibold leading-[1.1] drop-shadow-sm sm:text-5xl lg:text-6xl">{active.caption}</h2>
+              ) : null}
+            </motion.div>
+          </AnimatePresence>
+          {actions ? <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">{actions}</div> : null}
+        </div>
+      </div>
+
       {count > 1 ? (
-        <>
-          <button
-            type="button"
-            onClick={prev}
-            aria-label="Previous slide"
-            className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-charcoal-900 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={next}
-            aria-label="Next slide"
-            className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-charcoal-900 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-
-          <div className="absolute right-5 top-5 rounded-full bg-charcoal-900/60 px-3 py-1 text-xs font-semibold tabular-nums text-white backdrop-blur" aria-hidden>
-            {index + 1} / {count}
-          </div>
-
-          <div className="absolute inset-x-0 bottom-5 flex items-center justify-center gap-2" role="tablist" aria-label="Choose slide">
+        <div className={cn('absolute inset-x-0 bottom-0 flex items-center gap-4 px-6 sm:px-12 lg:px-16', reserveBottom ? 'pb-16 sm:pb-20' : 'pb-6')}>
+          {/* Progress bars: the active one fills over the autoplay interval. */}
+          <div className="flex flex-1 items-center gap-2" role="tablist" aria-label="Choose slide">
             {slides.map((s, i) => (
               <button
                 key={s.id ?? s.src}
@@ -153,14 +173,36 @@ export const HeroSlider = ({ slides, intervalMs = 5000, className }: HeroSliderP
                 aria-selected={i === index}
                 aria-label={`Go to slide ${i + 1}: ${s.eyebrow || s.alt}`}
                 onClick={() => go(i)}
-                className={cn(
-                  'h-2.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white',
-                  i === index ? 'w-8 bg-white' : 'w-2.5 bg-white/50 hover:bg-white/80',
-                )}
-              />
+                className="group/bar relative h-1 max-w-24 flex-1 overflow-hidden rounded-full bg-white/25 py-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                <span className="absolute inset-0 rounded-full bg-white/0 transition group-hover/bar:bg-white/20" aria-hidden />
+                {i < index ? <span className="absolute inset-0 rounded-full bg-white/70" aria-hidden /> : null}
+                {i === index ? (
+                  <motion.span
+                    key={`${index}-${animateProgress}`}
+                    className="absolute inset-y-0 left-0 rounded-full bg-white"
+                    initial={{ width: animateProgress ? '0%' : '100%' }}
+                    animate={{ width: '100%' }}
+                    transition={{ duration: animateProgress ? intervalMs / 1000 : 0, ease: 'linear' }}
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
             ))}
           </div>
-        </>
+
+          <span className="hidden text-xs font-semibold tabular-nums tracking-wider text-white/80 sm:inline" aria-hidden>
+            {String(index + 1).padStart(2, '0')} <span className="text-white/40">/ {String(count).padStart(2, '0')}</span>
+          </span>
+          <div className="flex gap-2">
+            <button type="button" onClick={prev} aria-label="Previous slide" className={glassButton}>
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={next} aria-label="Next slide" className={glassButton}>
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
       ) : null}
     </div>
   );
