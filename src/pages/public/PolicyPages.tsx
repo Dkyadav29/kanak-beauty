@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { SectionHeading } from '@/components/ui';
+import { LoadingSkeleton, SectionHeading } from '@/components/ui';
+import { PolicyText } from '@/components/shared/PolicyText';
+import { usePolicy } from '@/hooks/useCatalog';
+import { POLICY_DEFAULTS } from '@/lib/policyDefaults';
+import { formatDate } from '@/lib/utils';
+import type { PolicySlug } from '@/types';
 
 const PolicyLayout = ({ eyebrow, title, intro, children }: { eyebrow: string; title: string; intro: string; children: ReactNode }) => (
   <div className="container-x max-w-3xl py-12 lg:py-16">
@@ -40,50 +45,26 @@ export const FaqPage = () => (
   </PolicyLayout>
 );
 
-export const TermsPage = () => (
-  <PolicyLayout eyebrow="Legal" title="Terms and Conditions" intro="These terms govern your use of the Kanak Beauty Service website and learning platform.">
-    <Section title="1. Accounts">
-      <p>You must provide accurate information when registering and keep your login credentials confidential. You are responsible for activity under your account.</p>
-    </Section>
-    <Section title="2. Enrollment and access">
-      <p>Course access is granted after payment is confirmed by our payment provider. Access is personal and non-transferable. Sharing recordings or materials is prohibited.</p>
-    </Section>
-    <Section title="3. Certificates">
-      <p>Certificates are issued only when completion requirements are met and may be revoked if issued in error or obtained through misconduct.</p>
-    </Section>
-    <Section title="4. Conduct">
-      <p>Students must behave respectfully in live sessions. The academy may suspend access for abusive behaviour, with any refund handled under the Refund Policy.</p>
-    </Section>
-  </PolicyLayout>
-);
+/** Terms, Privacy and Refund: the admin-published version when there is one, else the default text. */
+const PolicyDocumentPage = ({ slug }: { slug: PolicySlug }) => {
+  const policy = usePolicy(slug);
+  const fallback = POLICY_DEFAULTS[slug];
+  const published = policy.data;
+  return (
+    <div className="container-x max-w-3xl py-12 lg:py-16">
+      <SectionHeading eyebrow="Legal" title={published?.title ?? fallback.title} description={published?.summary || fallback.intro} />
+      <div className="mt-10">
+        {policy.isLoading ? <LoadingSkeleton variant="list" count={4} /> : <PolicyText content={published?.content ?? fallback.content} />}
+      </div>
+      <p className="mt-12 text-xs text-charcoal-500">
+        {published
+          ? `Version ${published.version} · published ${formatDate(published.publishedAt)}`
+          : 'Draft wording, not yet published by the academy. It must be reviewed by the academy and its legal advisor before launch.'}
+      </p>
+    </div>
+  );
+};
 
-export const PrivacyPage = () => (
-  <PolicyLayout eyebrow="Legal" title="Privacy Policy" intro="How we collect, use and protect your personal information.">
-    <Section title="What we collect">
-      <p>Name, email, mobile number, learning progress, attendance and payment records (processed by our payment provider; we never store card details).</p>
-    </Section>
-    <Section title="How we use it">
-      <p>To deliver courses, send class reminders and receipts, issue certificates and improve the academy. Marketing messages are optional and can be turned off in your profile.</p>
-    </Section>
-    <Section title="Your rights">
-      <p>You may request a copy of your data or ask for its correction or deletion by contacting the academy. Certificate records may be retained for verification purposes.</p>
-    </Section>
-  </PolicyLayout>
-);
-
-export const RefundPolicyPage = () => (
-  <PolicyLayout eyebrow="Legal" title="Refund and Cancellation Policy" intro="Our approach to cancellations, refunds and batch changes.">
-    <Section title="Recorded courses">
-      <p>Refund requests are considered within 7 days of purchase provided less than 20% of the course content has been accessed.</p>
-    </Section>
-    <Section title="Live and hybrid batches">
-      <p>Full refund if you withdraw at least 7 days before the batch start date. Partial refunds or a transfer to a later batch may be offered after that at the academy’s discretion.</p>
-    </Section>
-    <Section title="Cancellations by the academy">
-      <p>If a batch is cancelled, you may choose a full refund or a transfer to the next available batch.</p>
-    </Section>
-    <Section title="Processing">
-      <p>Approved refunds are returned to the original payment method within 7 to 10 working days. Course access is withdrawn when a refund is processed.</p>
-    </Section>
-  </PolicyLayout>
-);
+export const TermsPage = () => <PolicyDocumentPage slug="terms" />;
+export const PrivacyPage = () => <PolicyDocumentPage slug="privacy" />;
+export const RefundPolicyPage = () => <PolicyDocumentPage slug="refund" />;

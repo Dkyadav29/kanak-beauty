@@ -1,10 +1,24 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { catalogService } from '@/services';
-import type { CourseFilters } from '@/types';
+import type { CourseFilters, PolicySlug } from '@/types';
 import { queryKeys } from './queryKeys';
 
 export const useCourses = (filters: CourseFilters & { featured?: boolean } = {}) =>
   useQuery({ queryKey: queryKeys.catalog.courses(filters), queryFn: () => catalogService.listCourses(filters), staleTime: 60_000 });
+
+/** Branding (logo); cached for the session and refreshed after admin changes. */
+export const useSiteSettings = () =>
+  useQuery({ queryKey: queryKeys.catalog.siteSettings, queryFn: catalogService.siteSettings, staleTime: 5 * 60_000, retry: 1 });
+
+/** Published policy version, or null when none is published yet (the page shows the default text). */
+export const usePolicy = (slug: PolicySlug) =>
+  useQuery({ queryKey: queryKeys.catalog.policy(slug), queryFn: () => catalogService.policy(slug), staleTime: 5 * 60_000 });
+
+export const useCourseBatches = (idOrSlug: string | undefined) =>
+  useQuery({ queryKey: queryKeys.catalog.courseBatches(idOrSlug ?? ''), queryFn: () => catalogService.courseBatches(idOrSlug!), enabled: !!idOrSlug, staleTime: 30_000 });
+
+export const useBatchInterest = () =>
+  useMutation({ mutationFn: ({ idOrSlug, ...payload }: { idOrSlug: string; email?: string; name?: string }) => catalogService.batchInterest(idOrSlug, payload) });
 
 export const useCourseCategories = () =>
   useQuery({ queryKey: queryKeys.catalog.categories, queryFn: catalogService.categories, staleTime: 5 * 60_000 });

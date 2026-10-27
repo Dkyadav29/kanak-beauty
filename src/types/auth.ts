@@ -79,6 +79,8 @@ export interface RegisterRequest {
   password: string;
   /** Optional referral code from an existing student (Refer & Earn). */
   referralCode?: string;
+  /** Acknowledges the current Terms and Privacy Policy (required once they are published). */
+  acceptPolicies?: boolean;
 }
 
 export interface RegisterResponse {

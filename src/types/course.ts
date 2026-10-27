@@ -46,6 +46,8 @@ export interface ScheduledInstallment {
   amount: number;
   /** Days after enrolment (approximate for monthly plans, which follow calendar months). */
   dueInDays: number;
+  /** Estimated date if the plan starts today (YYYY-MM-DD); the real schedule starts at the first payment. */
+  dueDate?: string;
 }
 
 /** One payment option as offered today. Computed by the backend; display only. */
@@ -112,9 +114,25 @@ export interface LearningMaterial {
   sizeLabel?: string;
 }
 
+/** A day inside a week (CourseModule): Course → Weeks → Days → Lessons. */
+export interface CourseDay {
+  id: string;
+  moduleId: string;
+  title: string;
+  description: string;
+  order: number;
+  isPublished: boolean;
+  lessons: Lesson[];
+}
+
 export interface Lesson {
   id: string;
   moduleId: string;
+  /** Null for lessons placed directly in the week. */
+  dayId?: string | null;
+  /** Free preview: visible (with its video) before purchase. */
+  isPreview?: boolean;
+  isPublished?: boolean;
   title: string;
   type: LessonType;
   durationMinutes: number;
@@ -132,7 +150,11 @@ export interface CourseModule {
   title: string;
   description: string;
   order: number;
+  isPublished?: boolean;
+  /** All lessons of the week (flat, curriculum order), each with its dayId. */
   lessons: Lesson[];
+  /** Day-wise grouping of the same lessons. */
+  days?: CourseDay[];
 }
 
 export interface CompletionCriteria {

@@ -1,13 +1,15 @@
 import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Clock, CreditCard, Gift, Lock, ShieldCheck, Wallet, XCircle } from 'lucide-react';
-import { useCourse } from '@/hooks/useCatalog';
-import { useCompleteSandboxCheckout, useCreateOrder, useEnrollments, useReferralSummary, useStudentPayment, useVerifyRazorpay } from '@/hooks/useStudent';
+import { useCourse, useCourseBatches } from '@/hooks/useCatalog';
+import { useCompleteSandboxCheckout, useCreateOrder, useEnrollments, usePolicyStatus, useReferralSummary, useStudentPayment, useVerifyRazorpay } from '@/hooks/useStudent';
+import { BatchPicker, NoBatchNotice } from '@/components/shared/BatchPicker';
+import { PaymentScheduleTable } from '@/components/shared/PaymentScheduleTable';
 import { useAuth } from '@/features/auth/AuthContext';
 import { ApiError, getErrorMessage } from '@/lib/api/errors';
 import { openRazorpay } from '@/lib/razorpay';
 import { env } from '@/config/env';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import type { CreateOrderResponse, PaymentPlanType } from '@/types';
 import { courseDurationLabel, formatAmount, paymentOptionSummary, sortedPaymentOptions } from '@/lib/coursePricing';
 import { PriceTag } from '@/components/shared/CourseCard';
@@ -47,6 +49,11 @@ const CheckoutPage = () => {
   const [searchParams] = useSearchParams();
   const installmentId = searchParams.get('installment') ?? undefined;
   const [plan, setPlan] = useState<PaymentPlanType | null>((searchParams.get('plan') as PaymentPlanType | null) ?? null);
+  // The student must pick a batch explicitly; nothing is preselected.
+  const [batchId, setBatchId] = useState<string | null>(null);
+  const batches = useCourseBatches(installmentId ? undefined : courseId);
+  const policyStatus = usePolicyStatus(isAuthenticated);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   if (!isReady) return <LoadingSkeleton variant="page" />;
   if (!isAuthenticated) {
@@ -66,19 +73,39 @@ const CheckoutPage = () => {
   const options = sortedPaymentOptions(c.pricing?.paymentOptions ?? []);
   const selectedPlan: PaymentPlanType | undefined = options.find((o) => o.type === plan)?.type ?? options[0]?.type;
   const walletApplies = !installmentId && selectedPlan === 'full';
+  const selectedOption = options.find((o) => o.type === selectedPlan);
+  const batchRequired = !installmentId && !!batches.data?.batchRequired;
+  const openBatches = (batches.data?.batches ?? []).filter((b) => b.isOpen);
+  const selectedBatch = batches.data?.batches.find((b) => b.id === batchId && b.isOpen) ?? null;
+  const termsPending = (policyStatus.data?.pending.length ?? 0) > 0;
+  const canProceed = (installmentId || (!!selectedPlan && !batches.isLoading && (!batchRequired || !!selectedBatch))) && (!termsPending || acceptTerms);
 
   const start = async () => {
     setError(null);
     setConfirming(false);
     try {
       const res = await createOrder.mutateAsync(
-        installmentId ? { courseId: c.id, installmentId } : { courseId: c.id, paymentPlan: selectedPlan, applyWalletCredit: walletApplies && applyWalletCredit },
+        installmentId
+          ? { courseId: c.id, installmentId, acceptTerms: termsPending ? acceptTerms : undefined }
+          : {
+              courseId: c.id,
+              paymentPlan: selectedPlan,
+              batchId: selectedBatch?.id,
+              applyWalletCredit: walletApplies && applyWalletCredit,
+              acceptTerms: termsPending ? acceptTerms : undefined,
+            },
       );
       setOrder(res);
       // Fully covered by discounts/credit: already paid and enrolled, nothing to collect.
       if (res.status === 'paid') void enrollments.refetch();
     } catch (e) {
       if (e instanceof ApiError && e.code === 'ALREADY_ENROLLED') void enrollments.refetch();
+      // The batch filled up or closed meanwhile: refresh the list so the student can pick another.
+      if (e instanceof ApiError && ['BATCH_FULL', 'ENROLLMENT_CLOSED', 'BATCH_CLOSED', 'NO_OPEN_BATCH', 'BATCH_REQUIRED'].includes(e.code)) {
+        setBatchId(null);
+        void batches.refetch();
+      }
+      if (e instanceof ApiError && e.code === 'TERMS_NOT_ACCEPTED') void policyStatus.refetch();
       setError(getErrorMessage(e));
     }
   };
@@ -302,13 +329,30 @@ const CheckoutPage = () => {
                   <Clock className="h-4 w-4 text-emerald-600" /> Duplicate orders for the same course are prevented automatically.
                 </li>
               </ul>
+              {!installmentId && batchRequired ? (
+                <section className="mt-5" aria-labelledby="step-batch">
+                  <h3 id="step-batch" className="text-sm font-semibold text-charcoal-900">
+                    1. Choose your batch
+                  </h3>
+                  <p className="mb-2 text-xs text-charcoal-500">Your start date, class schedule and course access follow the batch you choose.</p>
+                  {batches.isLoading ? (
+                    <LoadingSkeleton variant="list" count={2} />
+                  ) : batches.error ? (
+                    <ErrorState error={batches.error} onRetry={() => void batches.refetch()} compact />
+                  ) : openBatches.length > 0 ? (
+                    <BatchPicker batches={batches.data?.batches ?? []} value={batchId} onChange={setBatchId} />
+                  ) : (
+                    <NoBatchNotice courseIdOrSlug={c.slug} email={user?.email} />
+                  )}
+                </section>
+              ) : null}
               {installmentId ? (
                 <InlineAlert tone="info" className="mt-5">
                   You are paying the next installment of your plan for this course. The amount is the one you agreed to when you enrolled.
                 </InlineAlert>
               ) : options.length > 0 ? (
                 <fieldset className="mt-5">
-                  <legend className="text-sm font-semibold text-charcoal-900">Choose how to pay</legend>
+                  <legend className="text-sm font-semibold text-charcoal-900">{batchRequired ? '2. ' : ''}Choose how to pay</legend>
                   <div className="mt-2 space-y-2">
                     {options.map((o) => (
                       <label key={o.type} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${selectedPlan === o.type ? 'border-rose-400 bg-rose-50/60' : 'border-ivory-300 hover:border-rose-200'}`}>
@@ -335,6 +379,13 @@ const CheckoutPage = () => {
                   Online payment is not available for this course right now. Please contact the academy.
                 </InlineAlert>
               )}
+              {!installmentId && selectedOption && selectedOption.type !== 'full' ? (
+                <div className="mt-4">
+                  <p className="mb-2 text-sm font-semibold text-charcoal-900">Payment schedule</p>
+                  <PaymentScheduleTable option={selectedOption} currency={c.currency} />
+                  <p className="mt-2 text-xs text-charcoal-500">Dates are estimates: the schedule starts on the day your first payment is confirmed. Each installment is paid by you from Payment History; nothing is charged automatically.</p>
+                </div>
+              ) : null}
               {walletApplies && referral.data && referral.data.stats.walletBalance > 0 ? (
                 <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-gold-200 bg-gold-50 p-4">
                   <input type="checkbox" className="mt-0.5 h-4 w-4 accent-rose-600" checked={applyWalletCredit} onChange={(e) => setApplyWalletCredit(e.target.checked)} />
@@ -348,7 +399,23 @@ const CheckoutPage = () => {
                   </span>
                 </label>
               ) : null}
-              <Button className="mt-6 w-full sm:w-auto" size="lg" onClick={() => void start()} loading={createOrder.isPending} disabled={!installmentId && !selectedPlan} leftIcon={<CreditCard className="h-4 w-4" />}>
+              {termsPending ? (
+                <label className="mt-5 flex cursor-pointer items-start gap-3 text-sm">
+                  <input type="checkbox" className="mt-0.5 h-4 w-4 accent-rose-600" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} />
+                  <span className="text-charcoal-700">
+                    I have read and accept the{' '}
+                    <Link to="/terms" target="_blank" className="font-semibold text-rose-700 hover:underline">
+                      Terms and Conditions
+                    </Link>{' '}
+                    (including payment and installment obligations) and the{' '}
+                    <Link to="/privacy" target="_blank" className="font-semibold text-rose-700 hover:underline">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+              ) : null}
+              <Button className="mt-6 w-full sm:w-auto" size="lg" onClick={() => void start()} loading={createOrder.isPending} disabled={!canProceed} leftIcon={<CreditCard className="h-4 w-4" />}>
                 Proceed to payment
               </Button>
               <p className="mt-3 text-xs text-charcoal-500">
@@ -356,7 +423,7 @@ const CheckoutPage = () => {
                 <Link to="/refund-policy" className="font-semibold text-rose-700 hover:underline">
                   refund policy
                 </Link>
-                .
+                .{batchRequired && !selectedBatch && openBatches.length > 0 ? ' Choose a batch to continue.' : ''}
               </p>
             </div>
           )}
@@ -370,6 +437,11 @@ const CheckoutPage = () => {
             <p className="mt-1 text-sm text-charcoal-500">
               {c.trainer ? `${c.trainer.name} · ` : ''}{courseDurationLabel(c)}
             </p>
+            {selectedBatch ? (
+              <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                <span className="font-semibold">{selectedBatch.name}</span> · starts {formatDate(selectedBatch.startDate)}
+              </p>
+            ) : null}
             <div className="mt-4 border-t border-ivory-200 pt-4">
               <PriceTag price={c.price} discountPrice={c.discountPrice} currency={c.currency} />
               <p className="mt-1 text-xs text-charcoal-500">Billed to {user?.email}</p>

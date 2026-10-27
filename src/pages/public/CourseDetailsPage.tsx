@@ -1,29 +1,16 @@
-import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Award, BookOpen, CalendarDays, CheckCircle2, ChevronDown, Clock, FileText, Lock, PlayCircle, Radio, UserRound } from 'lucide-react';
+import { Award, BookOpen, CalendarDays, CheckCircle2, Clock, UserRound } from 'lucide-react';
 import { useCourse, useCourseSessions } from '@/hooks/useCatalog';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useEnrollments } from '@/hooks/useStudent';
-import type { Lesson } from '@/types';
-import { cn, formatDate, formatDuration } from '@/lib/utils';
+import { formatDate, formatDuration } from '@/lib/utils';
 import { PriceTag } from '@/components/shared/CourseCard';
+import { SyllabusTree } from '@/components/shared/SyllabusTree';
+import { syllabusCounts, syllabusWeeks } from '@/lib/syllabus';
 import { courseDurationLabel, paymentOptionSummary, sortedPaymentOptions } from '@/lib/coursePricing';
 import { LiveClassCard } from '@/components/shared/LiveClassCard';
 import { Avatar, Badge, ErrorState, ImageWithFallback, LinkButton, LoadingSkeleton, StatusBadge } from '@/components/ui';
 import { NotFoundPage } from '@/pages/ErrorPages';
-
-const lessonIcon = (type: Lesson['type']) => {
-  switch (type) {
-    case 'live':
-      return <Radio className="h-4 w-4 text-rose-600" />;
-    case 'reading':
-      return <FileText className="h-4 w-4 text-gold-700" />;
-    case 'assessment':
-      return <Award className="h-4 w-4 text-emerald-600" />;
-    default:
-      return <PlayCircle className="h-4 w-4 text-charcoal-700" />;
-  }
-};
 
 const CourseDetailsPage = () => {
   const { courseId } = useParams();
@@ -31,7 +18,6 @@ const CourseDetailsPage = () => {
   const sessions = useCourseSessions(courseId);
   const { isAuthenticated, user } = useAuth();
   const enrollments = useEnrollments();
-  const [openModule, setOpenModule] = useState<string | null>(null);
 
   if (course.isLoading) {
     return (
@@ -53,6 +39,7 @@ const CourseDetailsPage = () => {
   const isStudent = isAuthenticated && user?.role === 'student';
   const enrolled = isStudent ? enrollments.data?.find((e) => e.courseId === c.id && e.enrollment.accessStatus === 'active') : undefined;
   const lessons = c.modules.flatMap((m) => m.lessons);
+  const counts = syllabusCounts(syllabusWeeks(c.modules));
   const totalMinutes = lessons.reduce((n, l) => n + l.durationMinutes, 0);
 
   return (
@@ -82,7 +69,7 @@ const CourseDetailsPage = () => {
                 <Clock className="h-4 w-4 text-rose-600" /> {courseDurationLabel(c)} · {c.totalHours} hours
               </li>
               <li className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-rose-600" /> {c.modules.length} modules · {lessons.length} lessons
+                <BookOpen className="h-4 w-4 text-rose-600" /> {counts.weeks} weeks · {counts.lessons} lessons
               </li>
               <li className="flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-rose-600" /> {c.scheduleSummary}
@@ -184,41 +171,11 @@ const CourseDetailsPage = () => {
             <div className="flex flex-wrap items-end justify-between gap-2">
               <h2 className="font-display text-3xl font-semibold text-charcoal-900">Curriculum</h2>
               <p className="text-sm text-charcoal-500">
-                {c.modules.length} days · {lessons.length} lessons · {formatDuration(totalMinutes)}
+                {counts.weeks} week{counts.weeks === 1 ? '' : 's'}{counts.days ? ` · ${counts.days} days` : ''} · {counts.lessons} lessons · {formatDuration(totalMinutes)}
               </p>
             </div>
-            <div className="mt-4 space-y-3">
-              {c.modules.map((m) => {
-                const open = openModule === m.id || (openModule === null && m.order === 1);
-                return (
-                  <div key={m.id} className="card overflow-hidden">
-                    <button type="button" onClick={() => setOpenModule(open ? '' : m.id)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left" aria-expanded={open}>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-rose-600">Day {m.order}</p>
-                        <h3 className="font-display text-xl font-semibold text-charcoal-900">{m.title}</h3>
-                        <p className="text-sm text-charcoal-500">{m.description}</p>
-                      </div>
-                      <span className="flex items-center gap-3 text-sm text-charcoal-500">
-                        {m.lessons.length} lessons
-                        <ChevronDown className={cn('h-5 w-5 transition-transform', open && 'rotate-180')} />
-                      </span>
-                    </button>
-                    {open ? (
-                      <ul className="divide-y divide-ivory-200 border-t border-ivory-200">
-                        {m.lessons.map((l) => (
-                          <li key={l.id} className="flex items-center gap-3 px-5 py-3 text-sm">
-                            {lessonIcon(l.type)}
-                            <span className="flex-1 text-charcoal-800">{l.title}</span>
-                            {!l.isRequired ? <Badge tone="neutral">Optional</Badge> : null}
-                            <span className="text-charcoal-500">{formatDuration(l.durationMinutes)}</span>
-                            {!enrolled ? <Lock className="h-3.5 w-3.5 text-charcoal-500/60" aria-label="Enroll to access" /> : null}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                );
-              })}
+            <div className="mt-4">
+              <SyllabusTree modules={c.modules} enrolled={!!enrolled} />
             </div>
           </div>
 

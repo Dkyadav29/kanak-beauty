@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { KeyRound, PauseCircle, PlayCircle } from 'lucide-react';
 import { useAdminCourses, useAdminEnrollments, useEnrollmentMutations } from '@/hooks/useAdmin';
 import { getErrorMessage } from '@/lib/api/errors';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, titleCase } from '@/lib/utils';
+import { formatAmount } from '@/lib/coursePricing';
 import type { EnrollmentAdminRow, EnrollmentFilters } from '@/types';
 import { PermissionGate } from '@/components/auth/guards';
 import { Button, ConfirmationDialog, DataTable, Dialog, FormField, InlineAlert, Input, PageHeader, SearchAndFilters, Select, StatusBadge, Textarea, useToast, type Column } from '@/components/ui';
@@ -11,6 +12,44 @@ import { Button, ConfirmationDialog, DataTable, Dialog, FormField, InlineAlert, 
 const PAGE_SIZE = 10;
 const clean = (v?: string) => (v && v !== 'all' ? v : undefined);
 type AccessChange = { row: EnrollmentAdminRow; next: 'active' | 'suspended' } | null;
+
+/** Installment history of one enrollment (opened from the Payment column). */
+const InstallmentsDialog = ({ row, onClose }: { row: EnrollmentAdminRow; onClose: () => void }) => {
+  const plan = row.installmentPlan!;
+  return (
+    <Dialog open onClose={onClose} title={`${row.studentName} · ${row.courseTitle}`} description={`${titleCase(plan.planType)} plan · ${row.batchName ?? 'No batch assigned'}`} footer={<Button variant="ghost" onClick={onClose}>Close</Button>}>
+      <p className="mb-3 text-sm text-charcoal-700">
+        {formatAmount(plan.paidAmount, row.currency)} of {formatAmount(plan.totalAmount, row.currency)} paid · {plan.paidCount}/{plan.installmentCount} installments
+        {plan.isOverdue ? <span className="ml-2 font-semibold text-red-700">Overdue</span> : null}
+      </p>
+      <div className="overflow-hidden rounded-xl border border-ivory-300">
+        <table className="w-full text-sm">
+          <thead className="bg-ivory-100 text-left text-xs uppercase tracking-wider text-charcoal-500">
+            <tr>
+              <th className="px-3 py-2">#</th>
+              <th className="px-3 py-2">Due</th>
+              <th className="px-3 py-2 text-right">Amount</th>
+              <th className="px-3 py-2">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-ivory-200">
+            {plan.installments.map((i) => (
+              <tr key={i.sequence}>
+                <td className="px-3 py-2">{i.kind === 'deposit' ? 'Deposit' : i.sequence}</td>
+                <td className="px-3 py-2">{formatDate(i.dueDate)}</td>
+                <td className="px-3 py-2 text-right">{formatAmount(i.amount, row.currency)}</td>
+                <td className="px-3 py-2">
+                  <StatusBadge status={i.status} />
+                  {i.paidAt ? <span className="ml-2 text-xs text-charcoal-500">{formatDate(i.paidAt)}</span> : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Dialog>
+  );
+};
 
 const GrantDialog = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const toast = useToast();
@@ -80,6 +119,7 @@ const AdminEnrollmentsPage = () => {
   const [page, setPage] = useState(1);
   const [granting, setGranting] = useState(false);
   const [change, setChange] = useState<AccessChange>(null);
+  const [installmentsFor, setInstallmentsFor] = useState<EnrollmentAdminRow | null>(null);
   const [reason, setReason] = useState('');
   const courses = useAdminCourses();
   const { setAccess } = useEnrollmentMutations();
@@ -137,7 +177,7 @@ const AdminEnrollmentsPage = () => {
       render: (r) => (
         <div>
           <p>{r.courseTitle}</p>
-          {r.batchName ? <p className="text-xs text-charcoal-500">{r.batchName}</p> : null}
+          {r.batchName ? <p className="text-xs text-charcoal-500">{r.batchName}</p> : <p className="text-xs text-amber-700">No batch assigned</p>}
         </div>
       ),
       hideBelow: 'md',
@@ -163,6 +203,11 @@ const AdminEnrollmentsPage = () => {
         <div className="flex flex-wrap gap-1">
           <StatusBadge status={r.paymentStatus} label={r.paymentStatus === 'none' ? 'No payment' : undefined} />
           {r.refundStatus !== 'none' ? <StatusBadge status={r.refundStatus} label={`Refund ${r.refundStatus}`} /> : null}
+          {r.installmentPlan ? (
+            <button type="button" onClick={() => setInstallmentsFor(r)} className="w-full text-left text-xs font-semibold text-rose-700 hover:underline">
+              {titleCase(r.installmentPlan.planType)} · {r.installmentPlan.paidCount}/{r.installmentPlan.installmentCount} paid{r.installmentPlan.isOverdue ? ' · overdue' : ''}
+            </button>
+          ) : null}
         </div>
       ),
     },
@@ -274,6 +319,7 @@ const AdminEnrollmentsPage = () => {
       />
 
       <GrantDialog open={granting} onClose={() => setGranting(false)} />
+      {installmentsFor ? <InstallmentsDialog row={installmentsFor} onClose={() => setInstallmentsFor(null)} /> : null}
 
       <ConfirmationDialog
         open={change !== null}

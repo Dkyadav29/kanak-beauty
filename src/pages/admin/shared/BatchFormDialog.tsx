@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useAdminCourses, useAdminTrainers } from '@/hooks/useAdmin';
 import { ApiError, getErrorMessage } from '@/lib/api/errors';
 import type { Batch, BatchUpsertRequest } from '@/types';
-import { Button, Dialog, FormField, InlineAlert, Input, Select, Textarea } from '@/components/ui';
+import { Button, Checkbox, Dialog, FormField, InlineAlert, Input, Select, Textarea } from '@/components/ui';
 
 const schema = z
   .object({
@@ -18,6 +18,9 @@ const schema = z
     endTime: z.string().min(1, 'Select an end time'),
     capacity: z.number({ invalid_type_error: 'Enter a number' }).int('Enter a whole number').min(1, 'At least 1 seat'),
     scheduleNote: z.string().max(240, 'At most 240 characters'),
+    enrollmentDeadline: z.string(),
+    allowLateEnrollment: z.boolean(),
+    deliveryMode: z.enum(['', 'live', 'recorded', 'hybrid']),
     meetLink: z
       .string()
       .trim()
@@ -30,9 +33,10 @@ const schema = z
       .refine((v) => !v || /^https:\/\/\S+$/i.test(v), 'Enter a valid https:// link'),
   })
   .refine((v) => !v.startDate || !v.endDate || v.endDate >= v.startDate, { message: 'Must be on or after the start date', path: ['endDate'] })
-  .refine((v) => !v.startTime || !v.endTime || v.endTime > v.startTime, { message: 'Must be after the start time', path: ['endTime'] });
+  .refine((v) => !v.startTime || !v.endTime || v.endTime > v.startTime, { message: 'Must be after the start time', path: ['endTime'] })
+  .refine((v) => !v.enrollmentDeadline || !v.endDate || v.enrollmentDeadline <= v.endDate, { message: 'Must be on or before the end date', path: ['enrollmentDeadline'] });
 type FormValues = z.infer<typeof schema>;
-const FIELD_KEYS: Array<keyof FormValues> = ['name', 'courseId', 'trainerId', 'startDate', 'endDate', 'startTime', 'endTime', 'capacity', 'scheduleNote', 'meetLink', 'recordingLink'];
+const FIELD_KEYS: Array<keyof FormValues> = ['name', 'courseId', 'trainerId', 'startDate', 'endDate', 'startTime', 'endTime', 'capacity', 'scheduleNote', 'meetLink', 'recordingLink', 'enrollmentDeadline', 'allowLateEnrollment', 'deliveryMode'];
 
 const toValues = (b?: Batch): FormValues => ({
   name: b?.name ?? '',
@@ -47,6 +51,9 @@ const toValues = (b?: Batch): FormValues => ({
   scheduleNote: b?.scheduleNote ?? '',
   meetLink: b?.meetLink ?? '',
   recordingLink: b?.recordingLink ?? '',
+  enrollmentDeadline: b?.enrollmentDeadline ?? '',
+  allowLateEnrollment: b?.allowLateEnrollment ?? false,
+  deliveryMode: b?.deliveryMode ?? '',
 });
 
 /** Create / edit form for a batch. `onSubmit` should throw on failure; API field errors are mapped onto the form. */
@@ -88,7 +95,7 @@ export const BatchFormDialog = ({
   const submit = async (values: FormValues) => {
     setServerError(null);
     try {
-      await onSubmit({ ...values, name: values.name.trim(), scheduleNote: values.scheduleNote.trim(), meetLink: values.meetLink.trim(), recordingLink: values.recordingLink.trim() });
+      await onSubmit({ ...values, name: values.name.trim(), scheduleNote: values.scheduleNote.trim(), meetLink: values.meetLink.trim(), recordingLink: values.recordingLink.trim(), enrollmentDeadline: values.enrollmentDeadline || null });
       onClose();
     } catch (e) {
       if (e instanceof ApiError && e.details) {
@@ -170,6 +177,20 @@ export const BatchFormDialog = ({
         <FormField label="Capacity" htmlFor="batch-capacity" error={errors.capacity?.message} hint="Maximum number of seats" required>
           <Input id="batch-capacity" type="number" min={1} step={1} invalid={!!errors.capacity} {...register('capacity', { valueAsNumber: true })} />
         </FormField>
+        <FormField label="Enrollment deadline" htmlFor="batch-deadline" error={errors.enrollmentDeadline?.message} hint="Last day students can choose this batch. Blank = the start date.">
+          <Input id="batch-deadline" type="date" invalid={!!errors.enrollmentDeadline} {...register('enrollmentDeadline')} />
+        </FormField>
+        <FormField label="Delivery mode" htmlFor="batch-mode" hint="Shown when students choose a batch">
+          <Select id="batch-mode" {...register('deliveryMode')}>
+            <option value="">Same as the course</option>
+            <option value="live">Live</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="recorded">Recorded</option>
+          </Select>
+        </FormField>
+        <div className="sm:col-span-2">
+          <Checkbox id="batch-late" label="Allow late enrollment" description="Keep accepting students after the deadline or once the batch has started (a full batch stays closed)." {...register('allowLateEnrollment')} />
+        </div>
         <FormField label="Schedule note" htmlFor="batch-note" error={errors.scheduleNote?.message} hint="Shown to students, e.g. Sat & Sun, 10:00–13:00" className="sm:col-span-2">
           <Textarea id="batch-note" rows={2} invalid={!!errors.scheduleNote} {...register('scheduleNote')} />
         </FormField>

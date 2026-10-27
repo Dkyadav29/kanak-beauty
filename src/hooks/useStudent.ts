@@ -56,6 +56,8 @@ export const useStudentPayments = () => useQuery({ queryKey: queryKeys.student.p
 
 export const usePaymentPlans = () => useQuery({ queryKey: queryKeys.student.paymentPlans, queryFn: studentService.paymentPlans });
 
+export const usePolicyStatus = (enabled = true) => useQuery({ queryKey: queryKeys.student.policyStatus, queryFn: studentService.policyStatus, enabled });
+
 export const useStudentPayment = (paymentId: string | undefined, options: { poll?: boolean } = {}) =>
   useQuery({
     queryKey: queryKeys.student.payment(paymentId ?? ''),

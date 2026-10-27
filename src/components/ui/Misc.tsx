@@ -1,6 +1,8 @@
 import { useState, type ImgHTMLAttributes, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { cn, initials } from '@/lib/utils';
+import { useSiteSettings } from '@/hooks/useCatalog';
+import { resolveApiUrl } from '@/lib/api/client';
 
 export const Avatar = ({ name, src, size = 'md', className }: { name: string; src?: string | null; size?: 'sm' | 'md' | 'lg' | 'xl'; className?: string }) => {
   const [broken, setBroken] = useState(false);
@@ -64,7 +66,22 @@ export const ImageWithFallback = ({ className, alt, fallbackLabel, ...props }: I
   return <img className={className} alt={alt} loading="lazy" onError={() => setBroken(true)} {...props} />;
 };
 
-export const Logo = ({ className, dark, to = '/', compact }: { className?: string; dark?: boolean; to?: string; compact?: boolean }) => (
+/**
+ * Site logo: the admin-uploaded image (Admin > Branding) when set, otherwise the built-in mark.
+ * Used by every header, sidebar and footer, so a new upload shows everywhere after a refresh.
+ */
+export const Logo = ({ className, dark, to = '/', compact }: { className?: string; dark?: boolean; to?: string; compact?: boolean }) => {
+  const site = useSiteSettings();
+  const [broken, setBroken] = useState(false);
+  const logoUrl = site.data?.logoUrl;
+  if (logoUrl && !broken) {
+    return (
+      <Link to={to} className={cn('inline-flex items-center', className)} aria-label="Kanak Beauty Service home">
+        <img src={resolveApiUrl(logoUrl)} alt={site.data?.logoAlt || 'Kanak Beauty Service'} onError={() => setBroken(true)} className={cn('w-auto object-contain', compact ? 'h-9 max-w-[44px]' : 'h-10 max-w-[180px]')} />
+      </Link>
+    );
+  }
+  return (
   <Link to={to} className={cn('inline-flex items-center gap-2.5', className)} aria-label="Kanak Beauty Service home">
     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-600 text-white shadow-sm shadow-rose-600/30">
       <svg viewBox="0 0 64 64" className="h-5 w-5" aria-hidden>
@@ -78,7 +95,8 @@ export const Logo = ({ className, dark, to = '/', compact }: { className?: strin
       </span>
     ) : null}
   </Link>
-);
+  );
+};
 
 export const DashboardStatCard = ({ label, value, icon, hint, tone = 'rose', to }: { label: string; value: ReactNode; icon: ReactNode; hint?: ReactNode; tone?: 'rose' | 'gold' | 'success' | 'info' | 'neutral'; to?: string }) => {
   const tones = {

@@ -42,6 +42,9 @@ import type {
   AdminTrainer,
   CourseCategory,
   CourseCategoryUpsertRequest,
+  PolicySlug,
+  PolicyVersion,
+  SiteSettings,
   TrainerUpsertRequest,
   BatchCertificateResult,
   CertificateImageKind,
@@ -49,20 +52,28 @@ import type {
   CertificateSettingsUpdate,
 } from '@/types';
 
+export interface CurriculumLessonInput {
+  id?: string;
+  title: string;
+  type: 'video' | 'reading' | 'live' | 'assessment';
+  durationMinutes: number;
+  isRequired: boolean;
+  /** Free preview: visible (with its video) before purchase. */
+  isPreview?: boolean;
+  isPublished?: boolean;
+  summary: string;
+  /** Optional https link, e.g. a Google Drive share link. */
+  videoUrl?: string;
+}
+
+/** A week of the syllabus: `days` hold the day-wise lessons; `lessons` are lessons without a day. */
 export interface CurriculumModuleInput {
   id?: string;
   title: string;
   description: string;
-  lessons: Array<{
-    id?: string;
-    title: string;
-    type: 'video' | 'reading' | 'live' | 'assessment';
-    durationMinutes: number;
-    isRequired: boolean;
-    summary: string;
-    /** Optional https link, e.g. a Google Drive share link. */
-    videoUrl?: string;
-  }>;
+  isPublished?: boolean;
+  lessons: CurriculumLessonInput[];
+  days?: Array<{ id?: string; title: string; description: string; isPublished?: boolean; lessons: CurriculumLessonInput[] }>;
 }
 
 export interface EnrolledStudentOption {
@@ -212,6 +223,19 @@ export const adminService = {
     await apiClient.delete(`/admin/hero-slides/${slideId}`);
   },
   reorderHeroSlides: async (ids: string[]) => (await apiClient.put<AdminHeroSlide[]>('/admin/hero-slides/order', { ids })).data,
+  uploadLogo: async (file: File, alt: string) => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('alt', alt);
+    return (await apiClient.post<SiteSettings>('/admin/site-logo', form, multipart)).data;
+  },
+  updateLogoAlt: async (alt: string) => (await apiClient.post<SiteSettings>('/admin/site-logo', { alt })).data,
+  removeLogo: async () => (await apiClient.delete<SiteSettings>('/admin/site-logo')).data,
+  policyHistory: async (slug: PolicySlug) => (await apiClient.get<PolicyVersion[]>(`/admin/policies/${slug}`)).data,
+  publishPolicy: async (slug: PolicySlug, payload: { title: string; summary: string; content: string }) =>
+    (await apiClient.post<PolicyVersion>(`/admin/policies/${slug}`, payload)).data,
+  batchInterests: async (courseId?: string) =>
+    (await apiClient.get<Array<{ id: string; courseId: string; courseTitle: string; name: string; email: string; createdAt: string; notifiedAt: string | null }>>('/admin/batch-interests', { params: courseId ? { courseId } : {} })).data,
   homeVideo: async () => (await apiClient.get<AdminHomeVideo>('/admin/home-video')).data,
   updateHomeVideo: async (input: HomeVideoInput) => (await apiClient.put<AdminHomeVideo>('/admin/home-video', input)).data,
 

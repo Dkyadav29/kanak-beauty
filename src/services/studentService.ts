@@ -7,6 +7,7 @@ import type {
   EnrolledCourseView,
   JoinSessionResponse,
   PaymentPlan,
+  PolicyVersion,
   PaymentTransaction,
   Recording,
   RecordingPlaybackResponse,
@@ -70,6 +71,8 @@ export const studentService = {
   payments: async () => (await apiClient.get<PaymentTransaction[]>('/student/payments')).data,
   payment: async (paymentId: string) => (await apiClient.get<PaymentTransaction>(`/student/payments/${paymentId}`)).data,
   paymentPlans: async () => (await apiClient.get<PaymentPlan[]>('/student/payment-plans')).data,
+  /** Current Terms/Privacy versions this user has not accepted yet. */
+  policyStatus: async () => (await apiClient.get<{ pending: PolicyVersion[] }>('/me/policies')).data,
 
   // refer & earn
   referrals: async () => (await apiClient.get<ReferralSummary>('/student/referrals')).data,

@@ -10,6 +10,7 @@ import type {
   CertificateSettings,
   CertificateSettingsUpdate,
   CourseCategoryUpsertRequest,
+  PolicySlug,
   CourseUpsertRequest,
   DateRangeFilter,
   EnrollmentFilters,
@@ -64,6 +65,26 @@ export const useTrainerMutations = () => {
     removeSignature: useMutation({ mutationFn: (id: string) => adminService.removeTrainerSignature(id), onSuccess: done }),
   };
 };
+// branding & policies
+export const useLogoMutations = () => {
+  const invalidate = useInvalidateAdmin();
+  const done = () => invalidate(queryKeys.catalog.siteSettings);
+  return {
+    upload: useMutation({ mutationFn: ({ file, alt }: { file: File; alt: string }) => adminService.uploadLogo(file, alt), onSuccess: done }),
+    updateAlt: useMutation({ mutationFn: (alt: string) => adminService.updateLogoAlt(alt), onSuccess: done }),
+    remove: useMutation({ mutationFn: () => adminService.removeLogo(), onSuccess: done }),
+  };
+};
+export const usePolicyHistory = (slug: PolicySlug) => useQuery({ queryKey: queryKeys.admin.policyHistory(slug), queryFn: () => adminService.policyHistory(slug) });
+export const usePublishPolicy = () => {
+  const invalidate = useInvalidateAdmin();
+  return useMutation({
+    mutationFn: ({ slug, payload }: { slug: PolicySlug; payload: { title: string; summary: string; content: string } }) => adminService.publishPolicy(slug, payload),
+    onSuccess: (p) => invalidate(queryKeys.admin.policyHistory(p.slug), queryKeys.catalog.policy(p.slug)),
+  });
+};
+export const useBatchInterests = (courseId?: string) =>
+  useQuery({ queryKey: queryKeys.admin.batchInterests(courseId), queryFn: () => adminService.batchInterests(courseId) });
 export const useAdminCourseCategories = () =>
   useQuery({ queryKey: queryKeys.admin.courseCategories, queryFn: adminService.courseCategories, staleTime: 5 * 60_000 });
 export const useCourseCategoryMutations = () => {

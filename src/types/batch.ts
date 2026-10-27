@@ -21,8 +21,41 @@ export interface Batch {
   /** Admin responses only. Students get links via StudentBatch, and only when verified. */
   meetLink: string;
   recordingLink: string;
+  /** Last day students can choose this batch; null = the start date. */
+  enrollmentDeadline: ISODateString | null;
+  /** Admin override: keep accepting enrollments after the deadline/start (never when full). */
+  allowLateEnrollment: boolean;
+  /** '' = the course's format. */
+  deliveryMode: '' | 'live' | 'recorded' | 'hybrid';
   createdAt: ISODateString;
   updatedAt: ISODateString;
+}
+
+/** GET /courses/:idOrSlug/batches: an upcoming batch as shown when enrolling (no links). */
+export interface PublicBatch {
+  id: string;
+  code: string;
+  name: string;
+  courseId: string;
+  startDate: ISODateString;
+  endDate: ISODateString;
+  startTime: string | null;
+  endTime: string | null;
+  scheduleNote: string;
+  status: BatchStatus;
+  trainerName: string | null;
+  deliveryMode: 'live' | 'recorded' | 'hybrid';
+  capacity: number;
+  enrollmentDeadline: ISODateString;
+  seatsLeft: number;
+  isOpen: boolean;
+  closedReason: 'full' | 'deadline_passed' | 'started' | 'closed' | null;
+}
+
+export interface CourseBatches {
+  /** False only for self-paced courses without open batches (purchase without a batch). */
+  batchRequired: boolean;
+  batches: PublicBatch[];
 }
 
 export interface BatchEnrollment {
@@ -101,6 +134,9 @@ export interface BatchUpsertRequest {
   meetLink: string;
   /** Optional https link to the session recording. */
   recordingLink: string;
+  enrollmentDeadline?: string | null;
+  allowLateEnrollment?: boolean;
+  deliveryMode?: '' | 'live' | 'recorded' | 'hybrid';
   status?: BatchStatus;
 }
 

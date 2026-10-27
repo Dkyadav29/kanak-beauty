@@ -54,6 +54,7 @@ const InstallmentPlans = ({ plans }: { plans: PaymentPlan[] }) => (
                 </Link>
                 <p className="text-xs text-charcoal-500">
                   {titleCase(plan.planType)} plan · {paidCount} of {plan.installments.length} paid
+                  {plan.batchName ? ` · ${plan.batchName}` : ''}
                 </p>
               </div>
               <StatusBadge status={plan.status} />
@@ -99,6 +100,7 @@ const PaymentHistoryPage = () => {
         <div>
           <p className="font-medium">{p.courseTitle}</p>
           <p className="font-mono text-xs text-charcoal-500">{p.orderId}</p>
+          {p.batchName ? <p className="text-xs text-charcoal-500">{p.batchName}</p> : null}
           {p.installmentNumber ? <p className="text-xs text-charcoal-500">Installment {p.installmentNumber} of {p.installmentCount}</p> : null}
         </div>
       ),

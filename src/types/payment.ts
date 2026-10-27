@@ -24,6 +24,8 @@ export interface PaymentPlan {
   courseSlug: string;
   planType: Exclude<PaymentPlanType, 'full'>;
   status: PaymentPlanStatus;
+  batchId: string | null;
+  batchName: string | null;
   currency: string;
   listPrice: number;
   discountAmount: number;
@@ -64,6 +66,8 @@ export interface PaymentTransaction {
   planType: PaymentPlanType;
   installmentNumber: number | null;
   installmentCount: number | null;
+  batchId: string | null;
+  batchName: string | null;
 }
 
 export interface CreateOrderRequest {
@@ -74,6 +78,10 @@ export interface CreateOrderRequest {
   paymentPlan?: PaymentPlanType;
   /** Pay the next installment of a plan the student already started. */
   installmentId?: string;
+  /** The batch the student chose (required for batch-taught courses). */
+  batchId?: string;
+  /** Acknowledges the current Terms and Privacy Policy versions. */
+  acceptTerms?: boolean;
 }
 
 export interface CreateOrderResponse {

@@ -7,7 +7,7 @@ import { ArrowDown, ArrowLeft, ArrowUp, Plus, Save, Trash2 } from 'lucide-react'
 import { useAdminCourse, useAdminCourseCategories, useAdminTrainers, useCourseMutations } from '@/hooks/useAdmin';
 import type { CurriculumModuleInput } from '@/services';
 import { ApiError, getErrorMessage } from '@/lib/api/errors';
-import { formatDuration } from '@/lib/utils';
+import { cn, formatDuration } from '@/lib/utils';
 import { formatAmount, paymentOptionSummary, sortedPaymentOptions } from '@/lib/coursePricing';
 import type { Course, CourseUpsertRequest, DurationUnit, LessonType } from '@/types';
 import { Badge, Button, Card, CardBody, CardFooter, CardHeader, Checkbox, EmptyState, ErrorState, FormField, ImageWithFallback, InlineAlert, Input, LoadingSkeleton, PageHeader, Select, StatusBadge, Textarea, useToast } from '@/components/ui';
@@ -512,7 +512,7 @@ const CourseDetailsForm = ({ course }: { course?: Course }) => {
 };
 
 // ---------------------------------------------------------------------------
-// Curriculum editor
+// Curriculum editor: Course → Weeks → Days → Lessons
 // ---------------------------------------------------------------------------
 
 interface LessonDraft {
@@ -522,15 +522,28 @@ interface LessonDraft {
   type: LessonType;
   durationMinutes: number;
   isRequired: boolean;
+  isPreview: boolean;
+  isPublished: boolean;
   summary: string;
   videoUrl: string;
 }
-interface ModuleDraft {
+interface DayDraft {
   key: string;
   id?: string;
   title: string;
   description: string;
+  isPublished: boolean;
   lessons: LessonDraft[];
+}
+/** A week (CourseModule). `lessons` are lessons without a day (from before days existed). */
+interface WeekDraft {
+  key: string;
+  id?: string;
+  title: string;
+  description: string;
+  isPublished: boolean;
+  lessons: LessonDraft[];
+  days: DayDraft[];
 }
 
 let keySeq = 0;
@@ -538,16 +551,49 @@ const nextKey = () => `k${Date.now().toString(36)}${(keySeq++).toString(36)}`;
 const LESSON_TYPES: LessonType[] = ['video', 'reading', 'live', 'assessment'];
 const isVideoUrlValid = (v: string) => !v.trim() || /^https:\/\/\S+$/i.test(v.trim());
 
-const fromCourse = (course: Course): ModuleDraft[] =>
+const lessonDraft = (l: Course['modules'][number]['lessons'][number]): LessonDraft => ({
+  key: l.id,
+  id: l.id,
+  title: l.title,
+  type: l.type,
+  durationMinutes: l.durationMinutes,
+  isRequired: l.isRequired,
+  isPreview: l.isPreview ?? false,
+  isPublished: l.isPublished ?? true,
+  summary: l.summary,
+  videoUrl: l.videoUrl ?? '',
+});
+const newLesson = (): LessonDraft => ({ key: nextKey(), title: '', type: 'video', durationMinutes: 15, isRequired: true, isPreview: false, isPublished: true, summary: '', videoUrl: '' });
+const newDay = (title: string): DayDraft => ({ key: nextKey(), title, description: '', isPublished: true, lessons: [] });
+
+const fromCourse = (course: Course): WeekDraft[] =>
   [...course.modules]
     .sort((a, b) => a.order - b.order)
-    .map((m) => ({
-      key: m.id,
-      id: m.id,
-      title: m.title,
-      description: m.description,
-      lessons: [...m.lessons].sort((a, b) => a.order - b.order).map((l) => ({ key: l.id, id: l.id, title: l.title, type: l.type, durationMinutes: l.durationMinutes, isRequired: l.isRequired, summary: l.summary, videoUrl: l.videoUrl ?? '' })),
-    }));
+    .map((m) => {
+      const days = [...(m.days ?? [])].sort((a, b) => a.order - b.order);
+      const inDay = new Set(days.flatMap((d) => d.lessons.map((l) => l.id)));
+      return {
+        key: m.id,
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        isPublished: m.isPublished ?? true,
+        lessons: [...m.lessons].filter((l) => !inDay.has(l.id)).sort((a, b) => a.order - b.order).map(lessonDraft),
+        days: days.map((d) => ({ key: d.id, id: d.id, title: d.title, description: d.description, isPublished: d.isPublished, lessons: [...d.lessons].sort((a, b) => a.order - b.order).map(lessonDraft) })),
+      };
+    });
+
+/** Empty skeleton from the course duration: Week N with Day 1..7 each (days numbered across the course). */
+const skeletonFromDuration = (durationDays: number): WeekDraft[] => {
+  const total = Math.max(1, Math.min(durationDays || 7, 7 * 52));
+  const weeks: WeekDraft[] = [];
+  for (let d = 1, w = 1; d <= total; w++) {
+    const days: DayDraft[] = [];
+    for (let i = 0; i < 7 && d <= total; i++, d++) days.push(newDay(`Day ${d}`));
+    weeks.push({ key: nextKey(), title: `Week ${w}`, description: '', isPublished: true, lessons: [], days });
+  }
+  return weeks;
+};
 
 const move = <T,>(list: T[], from: number, to: number): T[] => {
   if (to < 0 || to >= list.length) return list;
@@ -557,10 +603,33 @@ const move = <T,>(list: T[], from: number, to: number): T[] => {
   return next;
 };
 
+const toLessonInput = (l: LessonDraft) => ({
+  id: l.id,
+  title: l.title.trim(),
+  type: l.type,
+  durationMinutes: Math.max(1, Math.round(l.durationMinutes || 1)),
+  isRequired: l.isRequired,
+  isPreview: l.isPreview,
+  isPublished: l.isPublished,
+  summary: l.summary.trim(),
+  videoUrl: l.videoUrl.trim(),
+});
+
+const MoveButtons = ({ label, index, count, onMove }: { label: string; index: number; count: number; onMove: (to: number) => void }) => (
+  <>
+    <Button variant="ghost" size="icon" aria-label={`Move ${label} up`} disabled={index === 0} onClick={() => onMove(index - 1)}>
+      <ArrowUp className="h-4 w-4" />
+    </Button>
+    <Button variant="ghost" size="icon" aria-label={`Move ${label} down`} disabled={index === count - 1} onClick={() => onMove(index + 1)}>
+      <ArrowDown className="h-4 w-4" />
+    </Button>
+  </>
+);
+
 const CurriculumEditor = ({ course }: { course: Course }) => {
   const toast = useToast();
   const { curriculum } = useCourseMutations();
-  const [modules, setModules] = useState<ModuleDraft[]>(() => fromCourse(course));
+  const [weeks, setWeeks] = useState<WeekDraft[]>(() => fromCourse(course));
   const [dirty, setDirty] = useState(false);
 
   // Same rule as the details form: only adopt a strictly newer server version, and never over unsaved edits.
@@ -568,132 +637,220 @@ const CurriculumEditor = ({ course }: { course: Course }) => {
   useEffect(() => {
     if (!dirty && course.updatedAt > syncedAt.current) {
       syncedAt.current = course.updatedAt;
-      setModules(fromCourse(course));
+      setWeeks(fromCourse(course));
     }
   }, [course, dirty]);
 
-  const edit = (fn: (m: ModuleDraft[]) => ModuleDraft[]) => {
-    setModules(fn);
+  const edit = (fn: (w: WeekDraft[]) => WeekDraft[]) => {
+    setWeeks(fn);
     setDirty(true);
   };
-  const updateModule = (mi: number, patch: Partial<ModuleDraft>) => edit((ms) => ms.map((m, i) => (i === mi ? { ...m, ...patch } : m)));
-  const updateLesson = (mi: number, li: number, patch: Partial<LessonDraft>) => edit((ms) => ms.map((m, i) => (i === mi ? { ...m, lessons: m.lessons.map((l, j) => (j === li ? { ...l, ...patch } : l)) } : m)));
+  const updateWeek = (wi: number, patch: Partial<WeekDraft> | ((w: WeekDraft) => Partial<WeekDraft>)) =>
+    edit((ws) => ws.map((w, i) => (i === wi ? { ...w, ...(typeof patch === 'function' ? patch(w) : patch) } : w)));
+  const updateDay = (wi: number, di: number, patch: Partial<DayDraft> | ((d: DayDraft) => Partial<DayDraft>)) =>
+    updateWeek(wi, (w) => ({ days: w.days.map((d, j) => (j === di ? { ...d, ...(typeof patch === 'function' ? patch(d) : patch) } : d)) }));
+  /** di === null addresses the week's lessons without a day. */
+  const updateLessons = (wi: number, di: number | null, fn: (ls: LessonDraft[]) => LessonDraft[]) =>
+    di === null ? updateWeek(wi, (w) => ({ lessons: fn(w.lessons) })) : updateDay(wi, di, (d) => ({ lessons: fn(d.lessons) }));
+  const updateLesson = (wi: number, di: number | null, li: number, patch: Partial<LessonDraft>) => updateLessons(wi, di, (ls) => ls.map((l, k) => (k === li ? { ...l, ...patch } : l)));
+  const moveLessonToDay = (wi: number, from: number | null, li: number, to: number | null) =>
+    updateWeek(wi, (w) => {
+      const source = from === null ? w.lessons : w.days[from].lessons;
+      const lesson = source[li];
+      const strip = (ls: LessonDraft[]) => ls.filter((l) => l.key !== lesson.key);
+      const lessons = from === null ? strip(w.lessons) : w.lessons;
+      const days = w.days.map((d, j) => ({ ...d, lessons: j === from ? strip(d.lessons) : d.lessons }));
+      if (to === null) return { lessons: [...lessons, lesson], days };
+      return { lessons, days: days.map((d, j) => (j === to ? { ...d, lessons: [...d.lessons, lesson] } : d)) };
+    });
 
-  const totalLessons = modules.reduce((n, m) => n + m.lessons.length, 0);
-  const totalMinutes = modules.reduce((n, m) => n + m.lessons.reduce((s, l) => s + (l.durationMinutes || 0), 0), 0);
-  const invalid = modules.some((m) => m.title.trim().length < 2 || m.lessons.some((l) => l.title.trim().length < 2 || !isVideoUrlValid(l.videoUrl)));
+  const allLessons = weeks.flatMap((w) => [...w.lessons, ...w.days.flatMap((d) => d.lessons)]);
+  const dayCount = weeks.reduce((n, w) => n + w.days.length, 0);
+  const totalMinutes = allLessons.reduce((s, l) => s + (l.durationMinutes || 0), 0);
+  const invalid =
+    weeks.some((w) => w.title.trim().length < 2 || w.days.some((d) => d.title.trim().length < 2)) ||
+    allLessons.some((l) => l.title.trim().length < 2 || !isVideoUrlValid(l.videoUrl));
 
   const save = async () => {
-    const payload: CurriculumModuleInput[] = modules.map((m) => ({
-      id: m.id,
-      title: m.title.trim(),
-      description: m.description.trim(),
-      lessons: m.lessons.map((l) => ({ id: l.id, title: l.title.trim(), type: l.type, durationMinutes: Math.max(1, Math.round(l.durationMinutes || 1)), isRequired: l.isRequired, summary: l.summary.trim(), videoUrl: l.videoUrl.trim() })),
+    const payload: CurriculumModuleInput[] = weeks.map((w) => ({
+      id: w.id,
+      title: w.title.trim(),
+      description: w.description.trim(),
+      isPublished: w.isPublished,
+      lessons: w.lessons.map(toLessonInput),
+      days: w.days.map((d) => ({ id: d.id, title: d.title.trim(), description: d.description.trim(), isPublished: d.isPublished, lessons: d.lessons.map(toLessonInput) })),
     }));
     try {
       const updated = await curriculum.mutateAsync({ id: course.id, modules: payload });
       syncedAt.current = updated.updatedAt;
-      setModules(fromCourse(updated));
+      setWeeks(fromCourse(updated));
       setDirty(false);
-      toast.success('Curriculum saved', `${updated.modules.length} day${updated.modules.length === 1 ? '' : 's'} saved.`);
+      toast.success('Curriculum saved', `${updated.modules.length} week${updated.modules.length === 1 ? '' : 's'} saved.`);
     } catch (e) {
       toast.error('Could not save curriculum', getErrorMessage(e));
     }
   };
 
+  // Days are numbered across the whole course, like the student view.
+  let dayNumber = 0;
+
+  const lessonRows = (wi: number, di: number | null, lessons: LessonDraft[], days: DayDraft[]) => (
+    <ul className="divide-y divide-ivory-200">
+      {lessons.map((l, li) => (
+        <li key={l.key} className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-12">
+          <FormField label="Lesson title" htmlFor={`${l.key}-title`} required className="lg:col-span-4" error={l.title.trim().length > 0 && l.title.trim().length < 2 ? 'At least 2 characters' : undefined}>
+            <Input id={`${l.key}-title`} value={l.title} onChange={(e) => updateLesson(wi, di, li, { title: e.target.value })} />
+          </FormField>
+          <FormField label="Type" htmlFor={`${l.key}-type`} className="lg:col-span-2">
+            <Select id={`${l.key}-type`} value={l.type} onChange={(e) => updateLesson(wi, di, li, { type: e.target.value as LessonType })}>
+              {LESSON_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t[0].toUpperCase() + t.slice(1)}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Minutes" htmlFor={`${l.key}-dur`} className="lg:col-span-2">
+            <Input id={`${l.key}-dur`} type="number" min={1} value={l.durationMinutes} onChange={(e) => updateLesson(wi, di, li, { durationMinutes: Number(e.target.value) })} />
+          </FormField>
+          <FormField label="Day" htmlFor={`${l.key}-day`} className="lg:col-span-4">
+            <Select id={`${l.key}-day`} value={di === null ? '' : String(di)} onChange={(e) => moveLessonToDay(wi, di, li, e.target.value === '' ? null : Number(e.target.value))}>
+              <option value="">No day (directly in the week)</option>
+              {days.map((d, j) => (
+                <option key={d.key} value={j}>
+                  {d.title || `Day ${j + 1}`}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Description" htmlFor={`${l.key}-sum`} className="sm:col-span-2 lg:col-span-12">
+            <Input id={`${l.key}-sum`} value={l.summary} onChange={(e) => updateLesson(wi, di, li, { summary: e.target.value })} placeholder="Optional, shown in the syllabus" />
+          </FormField>
+          {l.type === 'video' || l.videoUrl ? (
+            <FormField
+              label="Google Drive video link"
+              htmlFor={`${l.key}-video`}
+              className="sm:col-span-2 lg:col-span-12"
+              error={isVideoUrlValid(l.videoUrl) ? undefined : 'Enter a valid https:// link'}
+              hint={l.isPreview ? 'Free preview: this link is visible to everyone on the course page.' : 'In Google Drive: Share → General access → "Anyone with the link" (Viewer). Only enrolled students see this link.'}
+            >
+              <Input id={`${l.key}-video`} type="url" value={l.videoUrl} onChange={(e) => updateLesson(wi, di, li, { videoUrl: e.target.value })} placeholder="https://drive.google.com/file/d/…/view" />
+            </FormField>
+          ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2 lg:col-span-12">
+            <div className="flex flex-wrap gap-x-5">
+              <Checkbox id={`${l.key}-req`} label="Required for completion" checked={l.isRequired} onChange={(e) => updateLesson(wi, di, li, { isRequired: e.target.checked })} className="py-2" />
+              <Checkbox id={`${l.key}-prev`} label="Free preview" checked={l.isPreview} onChange={(e) => updateLesson(wi, di, li, { isPreview: e.target.checked })} className="py-2" />
+              <Checkbox id={`${l.key}-pub`} label="Published" checked={l.isPublished} onChange={(e) => updateLesson(wi, di, li, { isPublished: e.target.checked })} className="py-2" />
+            </div>
+            <div className="flex items-center gap-1">
+              {l.type === 'live' ? <Badge tone="rose">Matches a live session by title</Badge> : null}
+              <MoveButtons label="lesson" index={li} count={lessons.length} onMove={(to) => updateLessons(wi, di, (ls) => move(ls, li, to))} />
+              <Button variant="ghost" size="icon" aria-label="Remove lesson" className="text-red-600 hover:bg-red-50" onClick={() => updateLessons(wi, di, (ls) => ls.filter((_, k) => k !== li))}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
     <Card>
       <CardHeader
         title="Curriculum"
-        description={`${modules.length} day${modules.length === 1 ? '' : 's'} · ${totalLessons} lesson${totalLessons === 1 ? '' : 's'} · ${formatDuration(totalMinutes)}`}
+        description={`${weeks.length} week${weeks.length === 1 ? '' : 's'} · ${dayCount} day${dayCount === 1 ? '' : 's'} · ${allLessons.length} lesson${allLessons.length === 1 ? '' : 's'} · ${formatDuration(totalMinutes)}`}
         action={
-          <Button variant="secondary" size="sm" onClick={() => edit((ms) => [...ms, { key: nextKey(), title: '', description: '', lessons: [] }])} leftIcon={<Plus className="h-4 w-4" />}>
-            Add day
+          <Button variant="secondary" size="sm" onClick={() => edit((ws) => [...ws, { key: nextKey(), title: `Week ${ws.length + 1}`, description: '', isPublished: true, lessons: [], days: [] }])} leftIcon={<Plus className="h-4 w-4" />}>
+            Add week
           </Button>
         }
       />
       <CardBody className="space-y-5">
-        {modules.length === 0 ? (
-          <EmptyState title="No days yet" description="Add a day, then add that day's lessons inside it. A course needs at least one lesson before it can be published." compact action={<Button onClick={() => edit((ms) => [...ms, { key: nextKey(), title: 'Day 1', description: '', lessons: [] }])}>Add first day</Button>} />
+        {weeks.length === 0 ? (
+          <EmptyState
+            title="No weeks yet"
+            description="Organise the syllabus as Weeks → Days → Lessons. Generate the weeks and days from the course duration, or add them one by one. A course needs at least one lesson before it can be published."
+            compact
+            action={
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button onClick={() => edit(() => skeletonFromDuration(course.durationDays))}>Generate {Math.ceil((course.durationDays || 7) / 7)} week(s) from duration</Button>
+                <Button variant="outline" onClick={() => edit(() => [{ key: nextKey(), title: 'Week 1', description: '', isPublished: true, lessons: [], days: [newDay('Day 1')] }])}>
+                  Add first week
+                </Button>
+              </div>
+            }
+          />
         ) : null}
-        {modules.map((m, mi) => (
-          <div key={m.key} className="rounded-2xl border border-ivory-300 bg-ivory-50/60">
+        {weeks.map((w, wi) => (
+          <div key={w.key} className={cn('rounded-2xl border border-ivory-300 bg-ivory-50/60', !w.isPublished && 'opacity-75')}>
             <div className="flex flex-col gap-4 border-b border-ivory-200 p-4 sm:flex-row sm:items-start">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-600 font-display text-sm font-semibold text-white">{mi + 1}</span>
+              <span className="flex h-9 shrink-0 items-center justify-center rounded-xl bg-rose-600 px-3 font-display text-sm font-semibold text-white">W{wi + 1}</span>
               <div className="grid flex-1 gap-3 sm:grid-cols-2">
-                <FormField label={`Day ${mi + 1} title`} htmlFor={`${m.key}-title`} required error={m.title.trim().length > 0 && m.title.trim().length < 2 ? 'At least 2 characters' : undefined}>
-                  <Input id={`${m.key}-title`} value={m.title} onChange={(e) => updateModule(mi, { title: e.target.value })} placeholder="e.g. Foundations of skin prep" />
+                <FormField label={`Week ${wi + 1} title`} htmlFor={`${w.key}-title`} required error={w.title.trim().length > 0 && w.title.trim().length < 2 ? 'At least 2 characters' : undefined}>
+                  <Input id={`${w.key}-title`} value={w.title} onChange={(e) => updateWeek(wi, { title: e.target.value })} placeholder="e.g. Makeup Basics" />
                 </FormField>
-                <FormField label="Day description" htmlFor={`${m.key}-desc`}>
-                  <Input id={`${m.key}-desc`} value={m.description} onChange={(e) => updateModule(mi, { description: e.target.value })} placeholder="Optional summary" />
+                <FormField label="Week description" htmlFor={`${w.key}-desc`}>
+                  <Input id={`${w.key}-desc`} value={w.description} onChange={(e) => updateWeek(wi, { description: e.target.value })} placeholder="Optional summary" />
                 </FormField>
+                <Checkbox id={`${w.key}-pub`} label="Published" description="Unpublished weeks are hidden from students" checked={w.isPublished} onChange={(e) => updateWeek(wi, { isPublished: e.target.checked })} />
               </div>
               <div className="flex shrink-0 items-center gap-1 self-end sm:self-start">
-                <Button variant="ghost" size="icon" aria-label="Move day up" disabled={mi === 0} onClick={() => edit((ms) => move(ms, mi, mi - 1))}>
-                  <ArrowUp className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" aria-label="Move module down" disabled={mi === modules.length - 1} onClick={() => edit((ms) => move(ms, mi, mi + 1))}>
-                  <ArrowDown className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" aria-label="Remove day" className="text-red-600 hover:bg-red-50" onClick={() => edit((ms) => ms.filter((_, i) => i !== mi))}>
+                <MoveButtons label="week" index={wi} count={weeks.length} onMove={(to) => edit((ws) => move(ws, wi, to))} />
+                <Button variant="ghost" size="icon" aria-label="Remove week" className="text-red-600 hover:bg-red-50" onClick={() => edit((ws) => ws.filter((_, i) => i !== wi))}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            <ul className="divide-y divide-ivory-200">
-              {m.lessons.map((l, li) => (
-                <li key={l.key} className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-12">
-                  <FormField label="Lesson title" htmlFor={`${l.key}-title`} required className="lg:col-span-4" error={l.title.trim().length > 0 && l.title.trim().length < 2 ? 'At least 2 characters' : undefined}>
-                    <Input id={`${l.key}-title`} value={l.title} onChange={(e) => updateLesson(mi, li, { title: e.target.value })} />
-                  </FormField>
-                  <FormField label="Type" htmlFor={`${l.key}-type`} className="lg:col-span-2">
-                    <Select id={`${l.key}-type`} value={l.type} onChange={(e) => updateLesson(mi, li, { type: e.target.value as LessonType })}>
-                      {LESSON_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {t[0].toUpperCase() + t.slice(1)}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                  <FormField label="Minutes" htmlFor={`${l.key}-dur`} className="lg:col-span-2">
-                    <Input id={`${l.key}-dur`} type="number" min={1} value={l.durationMinutes} onChange={(e) => updateLesson(mi, li, { durationMinutes: Number(e.target.value) })} />
-                  </FormField>
-                  <FormField label="Summary" htmlFor={`${l.key}-sum`} className="sm:col-span-2 lg:col-span-4">
-                    <Input id={`${l.key}-sum`} value={l.summary} onChange={(e) => updateLesson(mi, li, { summary: e.target.value })} placeholder="Optional" />
-                  </FormField>
-                  {l.type === 'video' || l.videoUrl ? (
-                    <FormField
-                      label="Google Drive video link"
-                      htmlFor={`${l.key}-video`}
-                      className="sm:col-span-2 lg:col-span-12"
-                      error={isVideoUrlValid(l.videoUrl) ? undefined : 'Enter a valid https:// link'}
-                      hint='In Google Drive: Share → General access → "Anyone with the link" (Viewer). Only enrolled students see this link.'
-                    >
-                      <Input id={`${l.key}-video`} type="url" value={l.videoUrl} onChange={(e) => updateLesson(mi, li, { videoUrl: e.target.value })} placeholder="https://drive.google.com/file/d/…/view" />
-                    </FormField>
-                  ) : null}
-                  <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2 lg:col-span-12">
-                    <Checkbox id={`${l.key}-req`} label="Required for completion" checked={l.isRequired} onChange={(e) => updateLesson(mi, li, { isRequired: e.target.checked })} className="py-2" />
-                    <div className="flex items-center gap-1">
-                      {l.type === 'live' ? <Badge tone="rose">Matches a live session by title</Badge> : null}
-                      <Button variant="ghost" size="icon" aria-label="Move lesson up" disabled={li === 0} onClick={() => updateModule(mi, { lessons: move(m.lessons, li, li - 1) })}>
-                        <ArrowUp className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" aria-label="Move lesson down" disabled={li === m.lessons.length - 1} onClick={() => updateModule(mi, { lessons: move(m.lessons, li, li + 1) })}>
-                        <ArrowDown className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" aria-label="Remove lesson" className="text-red-600 hover:bg-red-50" onClick={() => updateModule(mi, { lessons: m.lessons.filter((_, j) => j !== li) })}>
-                        <Trash2 className="h-4 w-4" />
+            {w.lessons.length ? (
+              <div className="border-b border-ivory-200">
+                <p className="px-4 pt-3 text-xs font-semibold uppercase tracking-wider text-charcoal-500">Lessons without a day</p>
+                {lessonRows(wi, null, w.lessons, w.days)}
+              </div>
+            ) : null}
+
+            <div className="space-y-3 p-4">
+              {w.days.map((d, di) => {
+                dayNumber += 1;
+                return (
+                  <div key={d.key} className={cn('rounded-xl border border-ivory-300 bg-white', !d.isPublished && 'opacity-75')}>
+                    <div className="flex flex-col gap-3 border-b border-ivory-200 p-3 sm:flex-row sm:items-start">
+                      <span className="flex h-8 shrink-0 items-center justify-center rounded-lg bg-gold-100 px-2.5 text-xs font-semibold text-gold-800">Day {dayNumber}</span>
+                      <div className="grid flex-1 gap-3 sm:grid-cols-2">
+                        <FormField label="Day title" htmlFor={`${d.key}-title`} required error={d.title.trim().length > 0 && d.title.trim().length < 2 ? 'At least 2 characters' : undefined}>
+                          <Input id={`${d.key}-title`} value={d.title} onChange={(e) => updateDay(wi, di, { title: e.target.value })} placeholder="e.g. Skin Preparation and Makeup Products" />
+                        </FormField>
+                        <FormField label="Day topics" htmlFor={`${d.key}-desc`} hint="Shown to students even before lessons are added">
+                          <Input id={`${d.key}-desc`} value={d.description} onChange={(e) => updateDay(wi, di, { description: e.target.value })} placeholder="Optional" />
+                        </FormField>
+                        <Checkbox id={`${d.key}-pub`} label="Published" checked={d.isPublished} onChange={(e) => updateDay(wi, di, { isPublished: e.target.checked })} />
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1 self-end sm:self-start">
+                        <MoveButtons label="day" index={di} count={w.days.length} onMove={(to) => updateWeek(wi, (x) => ({ days: move(x.days, di, to) }))} />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Remove day"
+                          className="text-red-600 hover:bg-red-50"
+                          onClick={() => updateWeek(wi, (x) => ({ days: x.days.filter((_, j) => j !== di) }))}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    {lessonRows(wi, di, d.lessons, w.days)}
+                    <div className="p-3 pt-2">
+                      <Button variant="outline" size="sm" onClick={() => updateLessons(wi, di, (ls) => [...ls, newLesson()])} leftIcon={<Plus className="h-4 w-4" />}>
+                        Add lesson
                       </Button>
                     </div>
                   </div>
-                </li>
-              ))}
-            </ul>
-            <div className="p-4 pt-2">
-              <Button variant="outline" size="sm" onClick={() => updateModule(mi, { lessons: [...m.lessons, { key: nextKey(), title: '', type: 'video', durationMinutes: 15, isRequired: true, summary: '', videoUrl: '' }] })} leftIcon={<Plus className="h-4 w-4" />}>
-                Add lesson
+                );
+              })}
+              <Button variant="outline" size="sm" onClick={() => updateWeek(wi, (x) => ({ days: [...x.days, newDay(`Day ${dayNumber + 1}`)] }))} leftIcon={<Plus className="h-4 w-4" />}>
+                Add day
               </Button>
             </div>
           </div>
@@ -701,7 +858,14 @@ const CurriculumEditor = ({ course }: { course: Course }) => {
       </CardBody>
       <CardFooter>
         {dirty ? <span className="mr-auto text-xs text-charcoal-500">Unsaved curriculum changes</span> : null}
-        <Button variant="ghost" onClick={() => { setModules(fromCourse(course)); setDirty(false); }} disabled={!dirty || curriculum.isPending}>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setWeeks(fromCourse(course));
+            setDirty(false);
+          }}
+          disabled={!dirty || curriculum.isPending}
+        >
           Discard
         </Button>
         <Button onClick={() => void save()} loading={curriculum.isPending} disabled={!dirty || invalid} leftIcon={<Save className="h-4 w-4" />}>

@@ -6,6 +6,7 @@ import { useCourseProgress, useStudentCourse, useStudentLiveSessions, useUpdateL
 import { getErrorMessage } from '@/lib/api/errors';
 import { ApiError } from '@/lib/api/errors';
 import { cn, driveEmbedUrl, formatDuration } from '@/lib/utils';
+import { syllabusWeeks } from '@/lib/syllabus';
 import type { Lesson } from '@/types';
 import { LiveClassCard } from '@/components/shared/LiveClassCard';
 import { Badge, Button, buttonClasses, ErrorState, InlineAlert, LinkButton, LoadingSkeleton, ProgressBar, useToast } from '@/components/ui';
@@ -81,33 +82,42 @@ const CourseLearningPage = () => {
     setMobileSidebar(false);
   };
 
+  const lessonButton = (l: Lesson) => {
+    const done = completedIds.has(l.id);
+    const active = l.id === current.id;
+    return (
+      <li key={l.id}>
+        <button type="button" onClick={() => go(l)} className={cn('flex w-full items-start gap-2.5 rounded-xl px-3 py-2 text-left text-sm transition-colors', active ? 'bg-rose-50 text-rose-800' : 'hover:bg-ivory-200')} aria-current={active ? 'true' : undefined}>
+          {done ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> : <Circle className="mt-0.5 h-4 w-4 shrink-0 text-charcoal-500/50" />}
+          <span className="flex-1">
+            <span className={cn('block leading-snug', done && !active && 'text-charcoal-500')}>{l.title}</span>
+            <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-charcoal-500">
+              {typeIcon(l.type, 'h-3 w-3')} {formatDuration(l.durationMinutes)}
+              {!l.isRequired ? ' · optional' : ''}
+            </span>
+          </span>
+        </button>
+      </li>
+    );
+  };
+
+  // Same Course → Weeks → Days → Lessons hierarchy as the public syllabus.
   const Sidebar = (
-    <nav aria-label="Course days" className="space-y-5">
-      {c.modules.map((m) => (
-        <div key={m.id}>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
-            Day {m.order} · {m.title}
+    <nav aria-label="Course syllabus" className="space-y-6">
+      {syllabusWeeks(c.modules).map(({ week, number, loose, days }) => (
+        <div key={week.id}>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-700">
+            Week {number} · {week.title}
           </p>
-          <ul className="space-y-1">
-            {m.lessons.map((l) => {
-              const done = completedIds.has(l.id);
-              const active = l.id === current.id;
-              return (
-                <li key={l.id}>
-                  <button type="button" onClick={() => go(l)} className={cn('flex w-full items-start gap-2.5 rounded-xl px-3 py-2 text-left text-sm transition-colors', active ? 'bg-rose-50 text-rose-800' : 'hover:bg-ivory-200')} aria-current={active ? 'true' : undefined}>
-                    {done ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> : <Circle className="mt-0.5 h-4 w-4 shrink-0 text-charcoal-500/50" />}
-                    <span className="flex-1">
-                      <span className={cn('block leading-snug', done && !active && 'text-charcoal-500')}>{l.title}</span>
-                      <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-charcoal-500">
-                        {typeIcon(l.type, 'h-3 w-3')} {formatDuration(l.durationMinutes)}
-                        {!l.isRequired ? ' · optional' : ''}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          {loose.length ? <ul className="space-y-1">{loose.map(lessonButton)}</ul> : null}
+          {days.map(({ day, number: dayNo, lessons: dayLessons }) => (
+            <div key={day.id} className="mt-3 border-l-2 border-ivory-300 pl-3">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-charcoal-500">
+                Day {dayNo} · {day.title}
+              </p>
+              {dayLessons.length ? <ul className="space-y-1">{dayLessons.map(lessonButton)}</ul> : day.description ? <p className="px-3 text-xs text-charcoal-500">{day.description}</p> : null}
+            </div>
+          ))}
         </div>
       ))}
     </nav>

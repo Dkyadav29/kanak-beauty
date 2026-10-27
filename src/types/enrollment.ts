@@ -52,6 +52,21 @@ export interface EnrollmentAdminRow {
   source: EnrollmentSource;
   enrolledAt: ISODateString;
   completedAt: ISODateString | null;
+  /** The installment plan that paid for this enrollment; null for full payment / admin grant. */
+  installmentPlan: AdminInstallmentPlan | null;
+}
+
+export interface AdminInstallmentPlan {
+  id: string;
+  planType: string;
+  status: string;
+  totalAmount: number;
+  paidAmount: number;
+  paidCount: number;
+  installmentCount: number;
+  nextDueDate: string | null;
+  isOverdue: boolean;
+  installments: Array<{ sequence: number; kind: string; amount: number; dueDate: string; status: string; paidAt: ISODateString | null }>;
 }
 
 export interface EnrollmentFilters {

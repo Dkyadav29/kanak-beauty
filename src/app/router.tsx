@@ -48,6 +48,8 @@ const AdminStudentDetailPage = lazy(() => import('@/pages/admin/AdminStudentDeta
 const AdminCoursesPage = lazy(() => import('@/pages/admin/AdminCoursesPage'));
 const AdminTrainersPage = lazy(() => import('@/pages/admin/AdminTrainersPage'));
 const AdminCourseCategoriesPage = lazy(() => import('@/pages/admin/AdminCourseCategoriesPage'));
+const AdminBrandingPage = lazy(() => import('@/pages/admin/AdminBrandingPage'));
+const AdminPoliciesPage = lazy(() => import('@/pages/admin/AdminPoliciesPage'));
 const AdminCourseEditorPage = lazy(() => import('@/pages/admin/AdminCourseEditorPage'));
 const AdminBatchesPage = lazy(() => import('@/pages/admin/AdminBatchesPage'));
 const AdminBatchDetailPage = lazy(() => import('@/pages/admin/AdminBatchDetailPage'));
@@ -161,6 +163,8 @@ export const routes: RouteObject[] = [
       { path: 'referrals', element: <RequirePermission permission="referrals:manage"><AdminReferralsPage /></RequirePermission> },
       { path: 'hero-slides', element: <RequirePermission permission="content:manage"><AdminHeroSlidesPage /></RequirePermission> },
       { path: 'home-video', element: <RequirePermission permission="content:manage"><AdminHomeVideoPage /></RequirePermission> },
+      { path: 'branding', element: <RequirePermission permission="content:manage"><AdminBrandingPage /></RequirePermission> },
+      { path: 'policies', element: <RequirePermission permission="content:manage"><AdminPoliciesPage /></RequirePermission> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import { useAdminBatches, useAdminCourses, useAdminTrainers, useBatchMutations } from '@/hooks/useAdmin';
+import { useAdminBatches, useAdminCourses, useAdminTrainers, useBatchInterests, useBatchMutations } from '@/hooks/useAdmin';
 import { formatClassTime, formatDate, percent } from '@/lib/utils';
 import type { BatchFilters, BatchSummary } from '@/types';
 import { PermissionGate } from '@/components/auth/guards';
-import { Button, DataTable, PageHeader, ProgressBar, SearchAndFilters, StatusBadge, useToast, type Column } from '@/components/ui';
+import { Button, Card, CardBody, CardHeader, DataTable, PageHeader, ProgressBar, SearchAndFilters, StatusBadge, useToast, type Column } from '@/components/ui';
 import { BatchFormDialog } from './shared/BatchFormDialog';
 
 const PAGE_SIZE = 10;
@@ -138,6 +138,8 @@ const AdminBatchesPage = () => {
         caption="Batches"
       />
 
+      <WaitingList />
+
       <BatchFormDialog
         open={creating}
         onClose={() => setCreating(false)}
@@ -150,6 +152,32 @@ const AdminBatchesPage = () => {
         }}
       />
     </div>
+  );
+};
+
+/** Students who asked to be notified when a course opens a new batch. */
+const WaitingList = () => {
+  const interests = useBatchInterests();
+  if (!interests.data || interests.data.length === 0) return null;
+  return (
+    <Card className="mt-8">
+      <CardHeader title="Waiting for a new batch" description="Visitors and students who asked to be notified when a batch opens. Contact them when you schedule one." />
+      <CardBody>
+        <ul className="divide-y divide-ivory-200 text-sm">
+          {interests.data.map((r) => (
+            <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+              <span>
+                <span className="font-medium">{r.name || r.email}</span>
+                {r.name ? <span className="ml-2 text-charcoal-500">{r.email}</span> : null}
+              </span>
+              <span className="text-xs text-charcoal-500">
+                {r.courseTitle} · {formatDate(r.createdAt)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </CardBody>
+    </Card>
   );
 };
 

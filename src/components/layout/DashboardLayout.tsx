@@ -8,6 +8,8 @@ import {
   CalendarClock,
   ChevronLeft,
   Clapperboard,
+  Palette,
+  Scale,
   FolderTree,
   CreditCard,
   FileClock,
@@ -100,6 +102,8 @@ export const ADMIN_NAV: NavGroup[] = [
     items: [
       { to: '/admin/hero-slides', label: 'Hero Slider', icon: Images, permission: 'content:manage' },
       { to: '/admin/home-video', label: 'Home Video', icon: Clapperboard, permission: 'content:manage' },
+      { to: '/admin/branding', label: 'Branding', icon: Palette, permission: 'content:manage' },
+      { to: '/admin/policies', label: 'Policies', icon: Scale, permission: 'content:manage' },
     ],
   },
   {

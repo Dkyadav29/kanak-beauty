@@ -80,3 +80,24 @@ export interface HomeVideoInput {
   buttonLabel: string;
   buttonUrl: string;
 }
+
+/** GET /site-settings: branding used on every page. `logoUrl` is null when the text logo is used. */
+export interface SiteSettings {
+  logoUrl: string | null;
+  logoAlt: string;
+  updatedAt: string;
+}
+
+export type PolicySlug = 'terms' | 'privacy' | 'refund';
+
+/** One published version of a legal document (content is plain text with ## headings and - bullets). */
+export interface PolicyVersion {
+  id: string;
+  slug: PolicySlug;
+  version: number;
+  title: string;
+  summary: string;
+  content: string;
+  publishedAt: string;
+  publishedByName: string | null;
+}

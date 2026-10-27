@@ -47,6 +47,8 @@ const RegisterPage = () => {
         mobile: values.mobile,
         password: values.password,
         referralCode: values.referralCode?.trim() ? values.referralCode.trim().toUpperCase() : undefined,
+        // The form requires the box; the backend records the accepted policy versions.
+        acceptPolicies: values.terms,
       });
       if (res.verificationRequired) {
         navigate('/verify-email', { state: { email: res.email }, replace: true });
