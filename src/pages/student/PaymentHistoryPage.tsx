@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CreditCard, FileText, RotateCcw } from 'lucide-react';
-import { useStudentPayments } from '@/hooks/useStudent';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
-import type { PaymentTransaction } from '@/types';
-import { Button, DataTable, Dialog, KeyValue, LinkButton, PageHeader, StatusBadge, type Column } from '@/components/ui';
+import { usePaymentPlans, useStudentPayments } from '@/hooks/useStudent';
+import { formatDate, formatDateTime, titleCase } from '@/lib/utils';
+import { formatAmount } from '@/lib/coursePricing';
+import type { PaymentPlan, PaymentTransaction } from '@/types';
+import { Button, DataTable, Dialog, KeyValue, LinkButton, PageHeader, ProgressBar, StatusBadge, type Column } from '@/components/ui';
 
 const Receipt = ({ payment, onClose }: { payment: PaymentTransaction; onClose: () => void }) => (
   <Dialog open onClose={onClose} title="Payment receipt" description={payment.orderId} footer={<><Button variant="ghost" onClick={onClose}>Close</Button><Button onClick={() => window.print()} leftIcon={<FileText className="h-4 w-4" />}>Print / Save as PDF</Button></>}>
@@ -19,7 +20,8 @@ const Receipt = ({ payment, onClose }: { payment: PaymentTransaction; onClose: (
           { label: 'Order ID', value: <span className="font-mono">{payment.orderId}</span> },
           { label: 'Transaction ID', value: <span className="font-mono">{payment.id}</span> },
           { label: 'Course', value: payment.courseTitle },
-          { label: 'Amount', value: formatCurrency(payment.amount, payment.currency) },
+          ...(payment.installmentNumber ? [{ label: 'Installment', value: `${payment.installmentNumber} of ${payment.installmentCount} (${titleCase(payment.planType)} plan)` }] : []),
+          { label: 'Amount', value: formatAmount(payment.amount, payment.currency) },
           { label: 'Payment method', value: payment.method ?? '—' },
           { label: 'Gateway reference', value: payment.gatewayReference ?? '—' },
           { label: 'Created', value: formatDateTime(payment.createdAt) },
@@ -32,8 +34,61 @@ const Receipt = ({ payment, onClose }: { payment: PaymentTransaction; onClose: (
   </Dialog>
 );
 
+/** The student's installment plans: progress, next due installment and a manual "Pay" action. */
+const InstallmentPlans = ({ plans }: { plans: PaymentPlan[] }) => (
+  <section className="mb-8" aria-labelledby="plans-heading">
+    <h2 id="plans-heading" className="font-display text-2xl font-semibold text-charcoal-900">
+      Installment plans
+    </h2>
+    <p className="mt-1 text-sm text-charcoal-500">Installments are never charged automatically. Pay each one here when it is due.</p>
+    <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      {plans.map((plan) => {
+        const paidCount = plan.installments.filter((i) => i.status === 'paid').length;
+        const next = plan.nextInstallment;
+        return (
+          <article key={plan.id} className="card p-5">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <Link to={`/courses/${plan.courseSlug}`} className="font-medium text-charcoal-900 hover:text-rose-700">
+                  {plan.courseTitle}
+                </Link>
+                <p className="text-xs text-charcoal-500">
+                  {titleCase(plan.planType)} plan · {paidCount} of {plan.installments.length} paid
+                </p>
+              </div>
+              <StatusBadge status={plan.status} />
+            </div>
+            <ProgressBar value={plan.totalAmount ? (plan.paidAmount / plan.totalAmount) * 100 : 0} className="mt-4" />
+            <p className="mt-2 text-sm text-charcoal-700">
+              {formatAmount(plan.paidAmount, plan.currency)} of {formatAmount(plan.totalAmount, plan.currency)} paid
+              {plan.additionalFee > 0 ? <span className="text-charcoal-500"> (incl. {formatAmount(plan.additionalFee, plan.currency)} fee)</span> : null}
+            </p>
+            {next ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-ivory-100 p-3">
+                <div className="text-sm">
+                  <p className="font-medium">
+                    {next.kind === 'deposit' ? 'Deposit' : `Installment ${next.sequence}`}: {formatAmount(next.amount, plan.currency)}
+                  </p>
+                  <p className={next.isOverdue ? 'text-xs font-semibold text-red-700' : 'text-xs text-charcoal-500'}>
+                    {next.isOverdue ? 'Overdue since ' : 'Due '}
+                    {formatDate(next.dueDate)}
+                  </p>
+                </div>
+                <LinkButton to={`/student/checkout/${plan.courseId}?installment=${next.id}`} size="sm" leftIcon={<CreditCard className="h-3.5 w-3.5" />}>
+                  Pay now
+                </LinkButton>
+              </div>
+            ) : null}
+          </article>
+        );
+      })}
+    </div>
+  </section>
+);
+
 const PaymentHistoryPage = () => {
   const payments = useStudentPayments();
+  const plans = usePaymentPlans();
   const [receipt, setReceipt] = useState<PaymentTransaction | null>(null);
 
   const columns: Column<PaymentTransaction>[] = [
@@ -44,11 +99,12 @@ const PaymentHistoryPage = () => {
         <div>
           <p className="font-medium">{p.courseTitle}</p>
           <p className="font-mono text-xs text-charcoal-500">{p.orderId}</p>
+          {p.installmentNumber ? <p className="text-xs text-charcoal-500">Installment {p.installmentNumber} of {p.installmentCount}</p> : null}
         </div>
       ),
     },
     { key: 'date', header: 'Date', render: (p) => <span className="text-charcoal-700">{formatDateTime(p.createdAt)}</span>, hideBelow: 'md' },
-    { key: 'amount', header: 'Amount', render: (p) => <span className="font-semibold">{formatCurrency(p.amount, p.currency)}</span>, align: 'right' },
+    { key: 'amount', header: 'Amount', render: (p) => <span className="font-semibold">{formatAmount(p.amount, p.currency)}</span>, align: 'right' },
     { key: 'method', header: 'Method', render: (p) => p.method ?? '—', hideBelow: 'lg' },
     {
       key: 'status',
@@ -67,7 +123,7 @@ const PaymentHistoryPage = () => {
       render: (p) => (
         <div className="flex justify-end gap-1.5">
           {p.status === 'failed' || p.status === 'pending' ? (
-            <LinkButton to={`/student/checkout/${p.courseId}`} size="sm" variant="secondary" leftIcon={<RotateCcw className="h-3.5 w-3.5" />}>
+            <LinkButton to={`/student/checkout/${p.courseId}${p.installmentId ? `?installment=${p.installmentId}` : ''}`} size="sm" variant="secondary" leftIcon={<RotateCcw className="h-3.5 w-3.5" />}>
               {p.status === 'pending' ? 'Resume' : 'Retry'}
             </LinkButton>
           ) : null}
@@ -84,6 +140,7 @@ const PaymentHistoryPage = () => {
   return (
     <div>
       <PageHeader title="My Purchases & Payment History" description="All orders you have placed with the academy. Access to a course is granted only once a payment is confirmed." />
+      {plans.data && plans.data.length > 0 ? <InstallmentPlans plans={plans.data} /> : null}
       <DataTable
         columns={columns}
         rows={payments.data}

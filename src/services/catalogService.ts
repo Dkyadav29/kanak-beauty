@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api/client';
-import type { CertificateVerificationResult, Course, CourseFilters, CourseSummary, LiveSession, PublicHeroSlide, PublicHomeVideo, ReferralCodeValidation, Trainer } from '@/types';
+import type { CertificateVerificationResult, Course, CourseCategory, CourseFilters, CourseSummary, LiveSession, PublicHeroSlide, PublicHomeVideo, ReferralCodeValidation, Trainer } from '@/types';
 
 export interface AcademyStats {
   coursesOffered: number;
@@ -13,6 +13,7 @@ export interface AcademyStats {
 export const catalogService = {
   listCourses: async (filters: CourseFilters & { featured?: boolean } = {}) =>
     (await apiClient.get<CourseSummary[]>('/courses', { params: filters })).data,
+  categories: async () => (await apiClient.get<CourseCategory[]>('/course-categories')).data,
   getCourse: async (idOrSlug: string) => (await apiClient.get<Course>(`/courses/${encodeURIComponent(idOrSlug)}`)).data,
   getCourseSessions: async (idOrSlug: string) => (await apiClient.get<LiveSession[]>(`/courses/${encodeURIComponent(idOrSlug)}/sessions`)).data,
   upcomingSessions: async (limit = 8) => (await apiClient.get<LiveSession[]>('/live-sessions/upcoming', { params: { limit } })).data,

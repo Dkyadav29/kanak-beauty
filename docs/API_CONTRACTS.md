@@ -46,7 +46,8 @@ Returned on the user object (`User.permissions`) and enforced server-side.
 
 | Method & path | Response | Notes |
 | --- | --- | --- |
-| `GET /courses?search&level&format&featured` | `CourseSummary[]` | Published courses only. |
+| `GET /courses?search&level&format&featured&category` | `CourseSummary[]` | Published courses only. `category` is a category slug or id. Each course carries `category`, `durationValue`/`durationUnit`/`durationDays` and a backend-computed `pricing` block (`listPrice`, `finalPrice`, `discountAmount`, `discountPercent`, `isDiscountActive`, `discountEndsAt`, `paymentOptions[]`). `discountPrice` is the **currently active** discounted price (null once the offer window closes). |
+| `GET /course-categories` | `CourseCategory[]` | Active categories in display order. Defaults: Short-Term (1–30 days), Medium-Term (31–90), Long-Term (91+). |
 | `GET /courses/:idOrSlug` | `Course` | Published only; lesson `materials` stripped; 404 otherwise. |
 | `GET /courses/:idOrSlug/sessions` | `LiveSession[]` | Upcoming scheduled sessions for the course (no join info). |
 | `GET /live-sessions/upcoming?limit` | `LiveSession[]` | Next 45 days across published courses. |
@@ -96,6 +97,8 @@ Student                     Backend                         Gateway
 
 | Method & path | Auth | Rules |
 | --- | --- | --- |
+| `POST /payments/orders` (`paymentPlan`, `installmentId`) | student | `paymentPlan`: `full` (default) \| `daily` \| `monthly` \| `custom`; 400 `PLAN_UNAVAILABLE` when the course does not offer it now. An installment plan snapshots the agreed fee and schedule (`PaymentPlan` + `Installment` rows) and the order charges installment 1; later course price changes never alter it. `installmentId` pays the next unpaid installment of the student's own plan (404 otherwise; 409 `INSTALLMENT_PAID`, `INSTALLMENT_OUT_OF_ORDER`, `INSTALLMENT_UNAVAILABLE`). Referral discount and wallet credit apply to full payment only. Response adds `paymentPlan`, `installment`, `plan`. Each installment is a separate, student-initiated order; nothing is charged automatically. |
+| `GET /student/payment-plans` | student | The student's non-cancelled plans with `installments[]`, `paidAmount`, `nextInstallment` (`isOverdue` when past due). |
 | `POST /payments/orders` | student | Body `{ courseId }`. 404 unknown/unpublished course. 409 `ALREADY_ENROLLED` if an active enrollment exists. Reuses a pending order for the same course created within 30 min (idempotency). Response `CreateOrderResponse` — never includes gateway secrets. |
 | `POST /payments/webhook` | gateway signature header | Verify HMAC over the raw body with the gateway secret (sandbox header: `x-kanak-signature`). Repeated deliveries are idempotent. On `paid`: set `paidAt`, `invoiceAvailable`, then upsert exactly one enrollment per (student, course) with `accessStatus='active'`, inside a DB transaction with a unique constraint on (studentId, courseId). On `failed`: record `failureReason`; grant nothing. |
 | `POST /payments/sandbox/complete` | student | **Sandbox gateway only** (backend `PAYMENT_GATEWAY=sandbox`). Simulates the hosted checkout outcome and runs the webhook processor. The route is not registered for real gateways. |
@@ -118,6 +121,8 @@ Frontend guarantees: the success screen is shown only after `GET /student/paymen
 | `PUT /admin/courses/:id/modules` | `courses:manage` | `{ modules: CurriculumModuleInput[] }` → `Course`. Replaces curriculum structure, preserving ids. Audit `course.curriculum`. |
 | `POST /admin/courses/:id/thumbnail` | `courses:manage` | Multipart upload → `{ url }`; the editor currently accepts a URL. |
 | `GET /admin/courses/:id/enrolled-students` | `batches:manage` | Students with active access (for adding to batches). |
+| `GET/POST /admin/course-categories`, `PUT/DELETE /admin/course-categories/:id` | `courses:manage` | Category CRUD (`name`, `description`, `minDays`, `maxDays`, `order`, `isActive`); list adds `courseCount`. DELETE of a category still used by courses → 409 `CATEGORY_IN_USE`. |
+| `POST /admin/courses`, `PUT /admin/courses/:id` (pricing fields) | `courses:manage` | Optional: `categoryId` (null = by duration), `durationValue` + `durationUnit` (`days`/`weeks`/`months`; `durationWeeks` is derived), `discountType` (`""`/`percentage`/`fixed`), `discountValue`, `discountStartsAt`, `discountEndsAt`, `promotionalPrice` (overrides the discount inside the window), `allowFullPayment`, `allowDailyInstallments` (courses of 2–30 days), `allowMonthlyInstallments` (courses > 30 days; default on for new ones), `customPlan` `{ enabled, depositAmount, installmentCount, frequency, interval, additionalFee }`. 400 with field `details` for negative prices, discounts over 100% or over the price, promo ≥ price, end ≤ start, or no payment option. Legacy `discountPrice`-only bodies still work. Status adds `archived`. |
 | `GET /admin/trainers` | `courses:manage` | `Trainer[]` |
 | `GET /admin/batches?search&courseId&trainerId&status&startFrom&startTo&page&pageSize` | `batches:manage` | `Paginated<BatchSummary>` — includes completed/cancelled/archived (Batch History uses this). |
 | `GET /admin/batches/:id` | `batches:manage` | `BatchDetail` with students, attendance %, certificates, full `history` timeline and session ids. Available for archived batches. |

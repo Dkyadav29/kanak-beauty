@@ -8,6 +8,7 @@ import {
   CalendarClock,
   ChevronLeft,
   Clapperboard,
+  FolderTree,
   CreditCard,
   FileClock,
   Gift,
@@ -77,6 +78,7 @@ export const ADMIN_NAV: NavGroup[] = [
     items: [
       { to: '/admin/students', label: 'Students', icon: Users, permission: 'students:read' },
       { to: '/admin/courses', label: 'Courses', icon: GraduationCap, permission: 'courses:manage' },
+      { to: '/admin/course-categories', label: 'Course Categories', icon: FolderTree, permission: 'courses:manage' },
       { to: '/admin/trainers', label: 'Trainers', icon: UserRoundCog, permission: 'courses:manage' },
       { to: '/admin/batches', label: 'Batches', icon: Layers, permission: 'batches:manage' },
       { to: '/admin/live-sessions', label: 'Live Sessions', icon: Video, permission: 'batches:manage' },

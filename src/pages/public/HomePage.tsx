@@ -7,6 +7,7 @@ import { resolveApiUrl } from '@/lib/api/client';
 import { useAuth } from '@/features/auth/AuthContext';
 import { IMAGES } from '@/config/images';
 import { CourseCard } from '@/components/shared/CourseCard';
+import { CoursePricingSection } from '@/components/shared/CoursePricingSection';
 import { HeroSlider } from '@/components/shared/HeroSlider';
 import { HomeVideoPlayer } from '@/components/shared/HomeVideoPlayer';
 import { LiveClassCard } from '@/components/shared/LiveClassCard';
@@ -100,6 +101,9 @@ const HomePage = () => {
           ) : null}
         </div>
       </section>
+
+      {/* Courses & pricing: every published course with backend-computed fees and payment options. */}
+      <CoursePricingSection />
 
       {/* Video section: managed by admins (Admin > Home Video); hidden until switched on. */}
       {homeVideo.data?.enabled ? (

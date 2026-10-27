@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Clock, Layers, UserRound } from 'lucide-react';
 import type { CourseSummary } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { courseDurationLabel } from '@/lib/coursePricing';
 import { ImageWithFallback, LinkButton, StatusBadge } from '@/components/ui';
 
 export const PriceTag = ({ price, discountPrice, currency, size = 'md' }: { price: number; discountPrice: number | null; currency: string; size?: 'sm' | 'md' | 'lg' }) => {
@@ -49,7 +50,7 @@ export const CourseCard = ({ course, index = 0 }: { course: CourseSummary; index
           </li>
         ) : null}
         <li className="flex items-center gap-1.5">
-          <Clock className="h-3.5 w-3.5 text-rose-600" /> {course.durationWeeks} weeks · {course.totalHours}h
+          <Clock className="h-3.5 w-3.5 text-rose-600" /> {courseDurationLabel(course)} · {course.totalHours}h
         </li>
         <li className="flex items-center gap-1.5">
           <Layers className="h-3.5 w-3.5 text-rose-600" /> {course.lessonCount} lessons

@@ -57,6 +57,7 @@ const AdminCoursesPage = () => {
               { value: 'draft', label: 'Draft' },
               { value: 'published', label: 'Published' },
               { value: 'unpublished', label: 'Unpublished' },
+              { value: 'archived', label: 'Archived' },
             ],
           },
         ]}

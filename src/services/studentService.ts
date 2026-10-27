@@ -6,6 +6,7 @@ import type {
   CourseProgressSummary,
   EnrolledCourseView,
   JoinSessionResponse,
+  PaymentPlan,
   PaymentTransaction,
   Recording,
   RecordingPlaybackResponse,
@@ -68,6 +69,7 @@ export const studentService = {
   // payments
   payments: async () => (await apiClient.get<PaymentTransaction[]>('/student/payments')).data,
   payment: async (paymentId: string) => (await apiClient.get<PaymentTransaction>(`/student/payments/${paymentId}`)).data,
+  paymentPlans: async () => (await apiClient.get<PaymentPlan[]>('/student/payment-plans')).data,
 
   // refer & earn
   referrals: async () => (await apiClient.get<ReferralSummary>('/student/referrals')).data,

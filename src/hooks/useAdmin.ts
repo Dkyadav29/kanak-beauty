@@ -9,6 +9,7 @@ import type {
   CertificateImageKind,
   CertificateSettings,
   CertificateSettingsUpdate,
+  CourseCategoryUpsertRequest,
   CourseUpsertRequest,
   DateRangeFilter,
   EnrollmentFilters,
@@ -61,6 +62,18 @@ export const useTrainerMutations = () => {
     update: useMutation({ mutationFn: ({ id, payload }: { id: string; payload: TrainerUpsertRequest }) => adminService.updateTrainer(id, payload), onSuccess: done }),
     uploadSignature: useMutation({ mutationFn: ({ id, file }: { id: string; file: File }) => adminService.uploadTrainerSignature(id, file), onSuccess: done }),
     removeSignature: useMutation({ mutationFn: (id: string) => adminService.removeTrainerSignature(id), onSuccess: done }),
+  };
+};
+export const useAdminCourseCategories = () =>
+  useQuery({ queryKey: queryKeys.admin.courseCategories, queryFn: adminService.courseCategories, staleTime: 5 * 60_000 });
+export const useCourseCategoryMutations = () => {
+  const invalidate = useInvalidateAdmin();
+  // Category names show on course cards and in the catalogue filters.
+  const done = () => invalidate(queryKeys.admin.courseCategories, queryKeys.admin.courses(), ['catalog']);
+  return {
+    create: useMutation({ mutationFn: (p: CourseCategoryUpsertRequest) => adminService.createCourseCategory(p), onSuccess: done }),
+    update: useMutation({ mutationFn: ({ id, payload }: { id: string; payload: CourseCategoryUpsertRequest }) => adminService.updateCourseCategory(id, payload), onSuccess: done }),
+    remove: useMutation({ mutationFn: (id: string) => adminService.deleteCourseCategory(id), onSuccess: done }),
   };
 };
 export const useEnrolledStudents = (courseId: string | undefined) =>

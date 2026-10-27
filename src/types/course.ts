@@ -2,7 +2,75 @@ import type { ISODateString } from './common';
 
 export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
 export type CourseFormat = 'live' | 'recorded' | 'hybrid';
-export type CourseStatus = 'draft' | 'published' | 'unpublished';
+export type CourseStatus = 'draft' | 'published' | 'unpublished' | 'archived';
+export type DurationUnit = 'days' | 'weeks' | 'months';
+export type DiscountType = '' | 'percentage' | 'fixed';
+export type PaymentPlanType = 'full' | 'daily' | 'monthly' | 'custom';
+
+/** GET /course-categories (public) and /admin/course-categories (adds courseCount). */
+export interface CourseCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  /** Duration range (in days) a category covers; used to place courses without an explicit category. */
+  minDays: number | null;
+  maxDays: number | null;
+  order: number;
+  isActive: boolean;
+  courseCount?: number;
+}
+
+export interface CourseCategoryUpsertRequest {
+  name: string;
+  description: string;
+  minDays: number | null;
+  maxDays: number | null;
+  order: number;
+  isActive: boolean;
+}
+
+/** Admin configuration of the custom installment plan; amounts are computed by the backend. */
+export interface CustomPlanConfig {
+  enabled: boolean;
+  depositAmount: number;
+  installmentCount: number | null;
+  frequency: DurationUnit;
+  interval: number;
+  additionalFee: number;
+}
+
+export interface ScheduledInstallment {
+  sequence: number;
+  kind: 'deposit' | 'installment';
+  amount: number;
+  /** Days after enrolment (approximate for monthly plans, which follow calendar months). */
+  dueInDays: number;
+}
+
+/** One payment option as offered today. Computed by the backend; display only. */
+export interface PaymentOption {
+  type: PaymentPlanType;
+  label: string;
+  totalAmount: number;
+  additionalFee: number;
+  installmentCount: number;
+  /** The repeating amount (only the first installment can differ, by rounding). */
+  installmentAmount: number;
+  depositAmount: number;
+  frequency: DurationUnit | null;
+  schedule: ScheduledInstallment[];
+}
+
+export interface CoursePricing {
+  listPrice: number;
+  finalPrice: number;
+  discountAmount: number;
+  discountPercent: number;
+  isDiscountActive: boolean;
+  discountEndsAt: ISODateString | null;
+  paymentOptions: PaymentOption[];
+}
 export type LessonType = 'video' | 'reading' | 'live' | 'assessment';
 export type CertificateIssuanceMode = 'automatic' | 'manual_approval';
 
@@ -97,6 +165,21 @@ export interface Course {
   prerequisites: string[];
   outcomes: string[];
   scheduleSummary: string;
+  category: CourseCategory | null;
+  durationValue: number;
+  durationUnit: DurationUnit;
+  durationDays: number;
+  discountType: DiscountType;
+  discountValue: number | null;
+  discountStartsAt: ISODateString | null;
+  discountEndsAt: ISODateString | null;
+  promotionalPrice: number | null;
+  allowFullPayment: boolean;
+  allowDailyInstallments: boolean;
+  allowMonthlyInstallments: boolean;
+  customPlan: CustomPlanConfig;
+  /** Authoritative, backend-computed price and payment options. */
+  pricing: CoursePricing;
   modules: CourseModule[];
   createdAt: ISODateString;
   updatedAt: ISODateString;
@@ -129,6 +212,19 @@ export interface CourseUpsertRequest {
   prerequisites: string[];
   outcomes: string[];
   scheduleSummary: string;
+  /** Null places the course by duration. */
+  categoryId: string | null;
+  durationValue: number;
+  durationUnit: DurationUnit;
+  discountType: DiscountType;
+  discountValue: number | null;
+  discountStartsAt: ISODateString | null;
+  discountEndsAt: ISODateString | null;
+  promotionalPrice: number | null;
+  allowFullPayment: boolean;
+  allowDailyInstallments: boolean;
+  allowMonthlyInstallments: boolean;
+  customPlan: CustomPlanConfig;
 }
 
 export interface CourseFilters {
@@ -136,4 +232,6 @@ export interface CourseFilters {
   level?: CourseLevel | 'all';
   format?: CourseFormat | 'all';
   status?: CourseStatus | 'all';
+  /** Category slug or id. */
+  category?: string;
 }

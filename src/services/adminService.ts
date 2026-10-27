@@ -40,6 +40,8 @@ import type {
   StudentDirectoryRow,
   StudentFilters,
   AdminTrainer,
+  CourseCategory,
+  CourseCategoryUpsertRequest,
   TrainerUpsertRequest,
   BatchCertificateResult,
   CertificateImageKind,
@@ -114,6 +116,13 @@ export const adminService = {
     (await apiClient.put<Course>(`/admin/courses/${courseId}/modules`, { modules })).data,
   enrolledStudents: async (courseId: string) =>
     (await apiClient.get<EnrolledStudentOption[]>(`/admin/courses/${courseId}/enrolled-students`)).data,
+  courseCategories: async () => (await apiClient.get<CourseCategory[]>('/admin/course-categories')).data,
+  createCourseCategory: async (payload: CourseCategoryUpsertRequest) => (await apiClient.post<CourseCategory>('/admin/course-categories', payload)).data,
+  updateCourseCategory: async (categoryId: string, payload: CourseCategoryUpsertRequest) =>
+    (await apiClient.put<CourseCategory>(`/admin/course-categories/${categoryId}`, payload)).data,
+  deleteCourseCategory: async (categoryId: string) => {
+    await apiClient.delete(`/admin/course-categories/${categoryId}`);
+  },
   trainers: async () => (await apiClient.get<AdminTrainer[]>('/admin/trainers')).data,
   createTrainer: async (payload: TrainerUpsertRequest) => (await apiClient.post<AdminTrainer>('/admin/trainers', payload)).data,
   updateTrainer: async (trainerId: string, payload: TrainerUpsertRequest) =>

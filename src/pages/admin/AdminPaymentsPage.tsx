@@ -4,6 +4,7 @@ import { RefreshCw, Undo2 } from 'lucide-react';
 import { useAdminPayments, usePaymentMutations } from '@/hooks/useAdmin';
 import { getErrorMessage } from '@/lib/api/errors';
 import { formatCurrency, formatDateTime, titleCase } from '@/lib/utils';
+import { formatAmount } from '@/lib/coursePricing';
 import type { PaymentFilters, PaymentStatus, PaymentTransaction } from '@/types';
 import { PermissionGate } from '@/components/auth/guards';
 import { Button, ConfirmationDialog, DataTable, FormField, InlineAlert, PageHeader, SearchAndFilters, StatusBadge, Textarea, useToast, type Column } from '@/components/ui';
@@ -86,8 +87,8 @@ const AdminPaymentsPage = () => {
         </Link>
       ),
     },
-    { key: 'course', header: 'Course', render: (p) => p.courseTitle, hideBelow: 'lg' },
-    { key: 'amount', header: 'Amount', render: (p) => <span className="font-semibold">{formatCurrency(p.amount, p.currency)}</span>, align: 'right' },
+    { key: 'course', header: 'Course', render: (p) => <>{p.courseTitle}{p.installmentNumber ? <span className="block text-xs text-charcoal-500">Installment {p.installmentNumber} of {p.installmentCount} · {p.planType}</span> : null}</>, hideBelow: 'lg' },
+    { key: 'amount', header: 'Amount', render: (p) => <span className="font-semibold">{formatAmount(p.amount, p.currency)}</span>, align: 'right' },
     { key: 'method', header: 'Method', render: (p) => p.method ?? '—', hideBelow: 'xl' },
     {
       key: 'status',

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Clock, CreditCard, Gift, Lock, ShieldCheck, Wallet, XCircle } from 'lucide-react';
 import { useCourse } from '@/hooks/useCatalog';
 import { useCompleteSandboxCheckout, useCreateOrder, useEnrollments, useReferralSummary, useStudentPayment, useVerifyRazorpay } from '@/hooks/useStudent';
@@ -8,7 +8,8 @@ import { ApiError, getErrorMessage } from '@/lib/api/errors';
 import { openRazorpay } from '@/lib/razorpay';
 import { env } from '@/config/env';
 import { formatCurrency } from '@/lib/utils';
-import type { CreateOrderResponse } from '@/types';
+import type { CreateOrderResponse, PaymentPlanType } from '@/types';
+import { courseDurationLabel, formatAmount, paymentOptionSummary, sortedPaymentOptions } from '@/lib/coursePricing';
 import { PriceTag } from '@/components/shared/CourseCard';
 import { Button, ErrorState, ImageWithFallback, InlineAlert, LinkButton, LoadingSkeleton, PageHeader, Select, Spinner, StatusBadge } from '@/components/ui';
 
@@ -42,6 +43,10 @@ const CheckoutPage = () => {
   const [applyWalletCredit, setApplyWalletCredit] = useState(true);
   const referral = useReferralSummary();
   const payment = useStudentPayment(order?.paymentId, { poll: true });
+  // ?installment=<id> pays the next installment of a started plan; ?plan= preselects an option.
+  const [searchParams] = useSearchParams();
+  const installmentId = searchParams.get('installment') ?? undefined;
+  const [plan, setPlan] = useState<PaymentPlanType | null>((searchParams.get('plan') as PaymentPlanType | null) ?? null);
 
   if (!isReady) return <LoadingSkeleton variant="page" />;
   if (!isAuthenticated) {
@@ -55,14 +60,20 @@ const CheckoutPage = () => {
   if (course.error || !course.data) return <ErrorState error={course.error} onRetry={() => void course.refetch()} />;
   const c = course.data;
   const activeEnrollment = enrollments.data?.find((e) => e.courseId === c.id && e.enrollment.accessStatus === 'active');
-  const alreadyEnrolled = !!activeEnrollment;
+  // Paying a later installment happens while already enrolled, so it skips the "already enrolled" screen.
+  const alreadyEnrolled = !!activeEnrollment && !installmentId;
   const alreadyCompleted = !!activeEnrollment?.isCompleted;
+  const options = sortedPaymentOptions(c.pricing?.paymentOptions ?? []);
+  const selectedPlan: PaymentPlanType | undefined = options.find((o) => o.type === plan)?.type ?? options[0]?.type;
+  const walletApplies = !installmentId && selectedPlan === 'full';
 
   const start = async () => {
     setError(null);
     setConfirming(false);
     try {
-      const res = await createOrder.mutateAsync({ courseId: c.id, applyWalletCredit });
+      const res = await createOrder.mutateAsync(
+        installmentId ? { courseId: c.id, installmentId } : { courseId: c.id, paymentPlan: selectedPlan, applyWalletCredit: walletApplies && applyWalletCredit },
+      );
       setOrder(res);
       // Fully covered by discounts/credit: already paid and enrolled, nothing to collect.
       if (res.status === 'paid') void enrollments.refetch();
@@ -86,7 +97,7 @@ const CheckoutPage = () => {
           amount: g.amountMinor,
           currency: order.currency,
           name: g.name ?? 'Kanak Beauty Academy',
-          description: c.title,
+          description: order.installment ? `${c.title} · installment ${order.installment.sequence}` : c.title,
           prefill: { name: user?.name, email: user?.email, contact: user?.mobile },
           notes: { orderId: order.orderId },
           theme: { color: '#c2456b' },
@@ -154,7 +165,9 @@ const CheckoutPage = () => {
               </span>
               <h2 className="mt-4 font-display text-3xl font-semibold">Payment confirmed</h2>
               <p className="mt-2 text-charcoal-500">
-                Order {payment.data?.orderId} is paid and your enrollment is active. A receipt is available in your payment history.
+                {order?.installment && order.installment.sequence > 1
+                  ? `Order ${payment.data?.orderId} is paid. Installment ${order.installment.sequence} of your plan is settled; a receipt is in your payment history.`
+                  : `Order ${payment.data?.orderId} is paid and your enrollment is active. A receipt is available in your payment history.`}
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-2">
                 <LinkButton to={`/student/courses/${c.id}/learn`}>Start learning</LinkButton>
@@ -194,10 +207,23 @@ const CheckoutPage = () => {
                 Order <span className="font-mono">{order.orderId}</span>
               </p>
               <dl className="mt-4 space-y-1.5 rounded-xl bg-ivory-100 p-4 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-charcoal-500">Course price</dt>
-                  <dd>{formatCurrency(order.listPrice, order.currency)}</dd>
-                </div>
+                {order.installment && order.plan ? (
+                  <>
+                    <div className="flex justify-between">
+                      <dt className="text-charcoal-500">Plan total ({order.plan.installments.length} payments)</dt>
+                      <dd>{formatAmount(order.plan.totalAmount, order.currency)}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-charcoal-500">{order.installment.kind === 'deposit' ? 'Deposit' : `Installment ${order.installment.sequence} of ${order.plan.installments.length}`}</dt>
+                      <dd>{formatAmount(order.installment.amount, order.currency)}</dd>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between">
+                    <dt className="text-charcoal-500">Course price</dt>
+                    <dd>{formatCurrency(order.listPrice, order.currency)}</dd>
+                  </div>
+                )}
                 {order.referralDiscount > 0 ? (
                   <div className="flex justify-between text-emerald-700">
                     <dt className="flex items-center gap-1.5">
@@ -215,8 +241,8 @@ const CheckoutPage = () => {
                   </div>
                 ) : null}
                 <div className="flex justify-between border-t border-ivory-300 pt-1.5 font-semibold text-charcoal-900">
-                  <dt>Amount payable</dt>
-                  <dd>{formatCurrency(order.amount, order.currency)}</dd>
+                  <dt>Amount payable now</dt>
+                  <dd>{formatAmount(order.amount, order.currency)}</dd>
                 </div>
               </dl>
               {status === 'pending' && (simulate.isSuccess || confirming) ? (
@@ -226,7 +252,7 @@ const CheckoutPage = () => {
               ) : isRazorpay ? (
                 <div className="mt-6">
                   <Button size="lg" onClick={() => void payWithRazorpay()} loading={opening} leftIcon={<CreditCard className="h-4 w-4" />}>
-                    Pay {formatCurrency(order.amount, order.currency)}
+                    Pay {formatAmount(order.amount, order.currency)}
                   </Button>
                   <p className="mt-3 text-xs text-charcoal-500">UPI, cards, net banking and wallets via Razorpay. Your course unlocks automatically once the payment succeeds.</p>
                 </div>
@@ -251,7 +277,7 @@ const CheckoutPage = () => {
                       </Select>
                     </label>
                     <Button onClick={() => void pay('success')} loading={simulate.isPending} leftIcon={<CreditCard className="h-4 w-4" />}>
-                      Pay {formatCurrency(order.amount, order.currency)}
+                      Pay {formatAmount(order.amount, order.currency)}
                     </Button>
                     {env.paymentSandbox ? (
                       <Button variant="outline" onClick={() => void pay('failure')} disabled={simulate.isPending}>
@@ -276,7 +302,40 @@ const CheckoutPage = () => {
                   <Clock className="h-4 w-4 text-emerald-600" /> Duplicate orders for the same course are prevented automatically.
                 </li>
               </ul>
-              {referral.data && referral.data.stats.walletBalance > 0 ? (
+              {installmentId ? (
+                <InlineAlert tone="info" className="mt-5">
+                  You are paying the next installment of your plan for this course. The amount is the one you agreed to when you enrolled.
+                </InlineAlert>
+              ) : options.length > 0 ? (
+                <fieldset className="mt-5">
+                  <legend className="text-sm font-semibold text-charcoal-900">Choose how to pay</legend>
+                  <div className="mt-2 space-y-2">
+                    {options.map((o) => (
+                      <label key={o.type} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${selectedPlan === o.type ? 'border-rose-400 bg-rose-50/60' : 'border-ivory-300 hover:border-rose-200'}`}>
+                        <input type="radio" name="paymentPlan" className="mt-1 h-4 w-4 accent-rose-600" checked={selectedPlan === o.type} onChange={() => setPlan(o.type)} />
+                        <span className="min-w-0 flex-1 text-sm">
+                          <span className="flex flex-wrap items-baseline justify-between gap-x-3">
+                            <span className="font-semibold text-charcoal-900">{o.label}</span>
+                            <span className="font-semibold">{formatAmount(o.totalAmount, c.currency)}</span>
+                          </span>
+                          <span className="block text-charcoal-700">{paymentOptionSummary(o, c.currency)}</span>
+                          {o.additionalFee > 0 ? <span className="block text-xs text-charcoal-500">Includes a {formatAmount(o.additionalFee, c.currency)} plan fee</span> : null}
+                          {o.type !== 'full' && selectedPlan === o.type ? (
+                            <span className="mt-1 block text-xs text-charcoal-500">
+                              You pay {formatAmount(o.schedule[0].amount, c.currency)} now; course access starts once it is confirmed. Remaining installments are paid from Payment History when due (never charged automatically).
+                            </span>
+                          ) : null}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : (
+                <InlineAlert tone="warning" className="mt-5">
+                  Online payment is not available for this course right now. Please contact the academy.
+                </InlineAlert>
+              )}
+              {walletApplies && referral.data && referral.data.stats.walletBalance > 0 ? (
                 <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-gold-200 bg-gold-50 p-4">
                   <input type="checkbox" className="mt-0.5 h-4 w-4 accent-rose-600" checked={applyWalletCredit} onChange={(e) => setApplyWalletCredit(e.target.checked)} />
                   <span className="text-sm">
@@ -289,7 +348,7 @@ const CheckoutPage = () => {
                   </span>
                 </label>
               ) : null}
-              <Button className="mt-6 w-full sm:w-auto" size="lg" onClick={() => void start()} loading={createOrder.isPending} leftIcon={<CreditCard className="h-4 w-4" />}>
+              <Button className="mt-6 w-full sm:w-auto" size="lg" onClick={() => void start()} loading={createOrder.isPending} disabled={!installmentId && !selectedPlan} leftIcon={<CreditCard className="h-4 w-4" />}>
                 Proceed to payment
               </Button>
               <p className="mt-3 text-xs text-charcoal-500">
@@ -309,7 +368,7 @@ const CheckoutPage = () => {
           <div className="p-5">
             <h3 className="font-display text-xl font-semibold leading-snug">{c.title}</h3>
             <p className="mt-1 text-sm text-charcoal-500">
-              {c.trainer ? `${c.trainer.name} · ` : ''}{c.durationWeeks} weeks
+              {c.trainer ? `${c.trainer.name} · ` : ''}{courseDurationLabel(c)}
             </p>
             <div className="mt-4 border-t border-ivory-200 pt-4">
               <PriceTag price={c.price} discountPrice={c.discountPrice} currency={c.currency} />

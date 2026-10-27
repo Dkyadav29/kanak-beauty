@@ -5,8 +5,9 @@ import { useCourse, useCourseSessions } from '@/hooks/useCatalog';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useEnrollments } from '@/hooks/useStudent';
 import type { Lesson } from '@/types';
-import { cn, formatDuration } from '@/lib/utils';
+import { cn, formatDate, formatDuration } from '@/lib/utils';
 import { PriceTag } from '@/components/shared/CourseCard';
+import { courseDurationLabel, paymentOptionSummary, sortedPaymentOptions } from '@/lib/coursePricing';
 import { LiveClassCard } from '@/components/shared/LiveClassCard';
 import { Avatar, Badge, ErrorState, ImageWithFallback, LinkButton, LoadingSkeleton, StatusBadge } from '@/components/ui';
 import { NotFoundPage } from '@/pages/ErrorPages';
@@ -78,7 +79,7 @@ const CourseDetailsPage = () => {
             <p className="mt-4 max-w-2xl text-lg leading-relaxed text-charcoal-500">{c.shortDescription}</p>
             <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-charcoal-700">
               <li className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-rose-600" /> {c.durationWeeks} weeks · {c.totalHours} hours
+                <Clock className="h-4 w-4 text-rose-600" /> {courseDurationLabel(c)} · {c.totalHours} hours
               </li>
               <li className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-rose-600" /> {c.modules.length} modules · {lessons.length} lessons
@@ -103,7 +104,18 @@ const CourseDetailsPage = () => {
             <ImageWithFallback src={c.thumbnailUrl} alt={c.title} className="aspect-[16/10] w-full object-cover" fallbackLabel={c.title} />
             <div className="p-6">
               <PriceTag price={c.price} discountPrice={c.discountPrice} currency={c.currency} size="lg" />
-              <p className="mt-1 text-xs text-charcoal-500">One-time payment · Secure checkout · GST as applicable</p>
+              {c.pricing.isDiscountActive && c.pricing.discountEndsAt ? <p className="mt-1 text-xs text-rose-700">Offer ends {formatDate(c.pricing.discountEndsAt)}</p> : null}
+              {c.pricing.paymentOptions.length > 0 ? (
+                <ul className="mt-4 space-y-1.5 rounded-xl bg-ivory-100 p-3 text-sm" aria-label="Payment options">
+                  {sortedPaymentOptions(c.pricing.paymentOptions).map((o) => (
+                    <li key={o.type} className="flex flex-wrap justify-between gap-x-3">
+                      <span className="font-medium text-charcoal-900">{o.label}</span>
+                      <span className="text-charcoal-700">{paymentOptionSummary(o, c.currency)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <p className="mt-2 text-xs text-charcoal-500">Secure checkout · GST as applicable</p>
               <div className="mt-5 space-y-2">
                 {enrolled?.isCompleted ? (
                   <>

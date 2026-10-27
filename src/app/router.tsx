@@ -47,6 +47,7 @@ const AdminStudentsPage = lazy(() => import('@/pages/admin/AdminStudentsPage'));
 const AdminStudentDetailPage = lazy(() => import('@/pages/admin/AdminStudentDetailPage'));
 const AdminCoursesPage = lazy(() => import('@/pages/admin/AdminCoursesPage'));
 const AdminTrainersPage = lazy(() => import('@/pages/admin/AdminTrainersPage'));
+const AdminCourseCategoriesPage = lazy(() => import('@/pages/admin/AdminCourseCategoriesPage'));
 const AdminCourseEditorPage = lazy(() => import('@/pages/admin/AdminCourseEditorPage'));
 const AdminBatchesPage = lazy(() => import('@/pages/admin/AdminBatchesPage'));
 const AdminBatchDetailPage = lazy(() => import('@/pages/admin/AdminBatchDetailPage'));
@@ -147,6 +148,7 @@ export const routes: RouteObject[] = [
       { path: 'courses/new', element: <RequirePermission permission="courses:manage"><AdminCourseEditorPage /></RequirePermission> },
       { path: 'courses/:courseId', element: <RequirePermission permission="courses:manage"><AdminCourseEditorPage /></RequirePermission> },
       { path: 'trainers', element: <RequirePermission permission="courses:manage"><AdminTrainersPage /></RequirePermission> },
+      { path: 'course-categories', element: <RequirePermission permission="courses:manage"><AdminCourseCategoriesPage /></RequirePermission> },
       { path: 'batches', element: <RequirePermission permission="batches:manage"><AdminBatchesPage /></RequirePermission> },
       { path: 'batches/:batchId', element: <RequirePermission permission="batches:manage"><AdminBatchDetailPage /></RequirePermission> },
       { path: 'batch-history', element: <RequirePermission permission="batches:manage"><AdminBatchHistoryPage /></RequirePermission> },

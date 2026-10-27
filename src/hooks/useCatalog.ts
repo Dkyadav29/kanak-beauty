@@ -6,6 +6,9 @@ import { queryKeys } from './queryKeys';
 export const useCourses = (filters: CourseFilters & { featured?: boolean } = {}) =>
   useQuery({ queryKey: queryKeys.catalog.courses(filters), queryFn: () => catalogService.listCourses(filters), staleTime: 60_000 });
 
+export const useCourseCategories = () =>
+  useQuery({ queryKey: queryKeys.catalog.categories, queryFn: catalogService.categories, staleTime: 5 * 60_000 });
+
 export const useCourse = (idOrSlug: string | undefined) =>
   useQuery({ queryKey: queryKeys.catalog.course(idOrSlug ?? ''), queryFn: () => catalogService.getCourse(idOrSlug!), enabled: !!idOrSlug, staleTime: 60_000 });
 

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { paymentService, studentService } from '@/services';
-import type { ChangePasswordRequest, RazorpayVerifyRequest, StudentBatchPhase, UpdateLessonProgressRequest, UpdateProfileRequest } from '@/types';
+import type { ChangePasswordRequest, CreateOrderRequest, RazorpayVerifyRequest, StudentBatchPhase, UpdateLessonProgressRequest, UpdateProfileRequest } from '@/types';
 import { queryKeys } from './queryKeys';
 
 export const useStudentDashboard = () => useQuery({ queryKey: queryKeys.student.dashboard, queryFn: studentService.dashboard });
@@ -54,6 +54,8 @@ export const usePlayback = () => useMutation({ mutationFn: (recordingId: string)
 
 export const useStudentPayments = () => useQuery({ queryKey: queryKeys.student.payments, queryFn: studentService.payments });
 
+export const usePaymentPlans = () => useQuery({ queryKey: queryKeys.student.paymentPlans, queryFn: studentService.paymentPlans });
+
 export const useStudentPayment = (paymentId: string | undefined, options: { poll?: boolean } = {}) =>
   useQuery({
     queryKey: queryKeys.student.payment(paymentId ?? ''),
@@ -70,7 +72,7 @@ export const useStudentCertificate = (certificateId: string | undefined) =>
   useQuery({ queryKey: queryKeys.student.certificate(certificateId ?? ''), queryFn: () => studentService.certificate(certificateId!), enabled: !!certificateId });
 
 export const useCreateOrder = () =>
-  useMutation({ mutationFn: (payload: { courseId: string; applyWalletCredit?: boolean }) => paymentService.createOrder(payload) });
+  useMutation({ mutationFn: (payload: CreateOrderRequest) => paymentService.createOrder(payload) });
 
 export const useVerifyRazorpay = () => {
   const qc = useQueryClient();
