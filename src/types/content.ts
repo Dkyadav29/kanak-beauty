@@ -2,6 +2,19 @@
 export type HeroSlideFocus = 'center' | 'top' | 'bottom' | 'left' | 'right' | 'left-top' | 'right-top' | 'left-bottom' | 'right-bottom';
 
 /** GET /hero-slides: active slides in display order. ``imageUrl`` may be relative to the API host. */
+/** The course a hero slide promotes, with its live (backend-computed) price and discount. */
+export interface HeroSlideCourse {
+  id: string;
+  slug: string;
+  title: string;
+  currency: string;
+  listPrice: number;
+  finalPrice: number;
+  discountPercent: number;
+  isDiscountActive: boolean;
+  discountEndsAt: string | null;
+}
+
 export interface PublicHeroSlide {
   id: string;
   imageUrl: string;
@@ -9,12 +22,17 @@ export interface PublicHeroSlide {
   eyebrow: string;
   caption: string;
   focus: HeroSlideFocus;
+  /** Null when the slide links to no course (or the course is not published). */
+  course: HeroSlideCourse | null;
 }
 
 /** GET /admin/hero-slides: every slide, including hidden ones. */
 export interface AdminHeroSlide extends PublicHeroSlide {
   /** True when the image was uploaded to the academy server, false for an external URL. */
   imageUploaded: boolean;
+  courseId: string | null;
+  courseTitle: string | null;
+  courseStatus: string | null;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
@@ -30,6 +48,8 @@ export interface HeroSlideInput {
   caption?: string;
   focus?: HeroSlideFocus;
   isActive?: boolean;
+  /** '' unlinks the slide from its course. */
+  courseId?: string;
 }
 
 export type HomeVideoProvider = 'youtube' | 'vimeo' | 'drive' | 'file';
@@ -82,7 +102,17 @@ export interface HomeVideoInput {
 }
 
 /** GET /site-settings: branding used on every page. `logoUrl` is null when the text logo is used. */
-export interface SiteSettings {
+export interface SiteContact {
+  companyName: string;
+  address: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  businessHours: string;
+  mapUrl: string;
+}
+
+export interface SiteSettings extends SiteContact {
   logoUrl: string | null;
   logoAlt: string;
   updatedAt: string;

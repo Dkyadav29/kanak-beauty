@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
 import { ImagePickerField } from '@/components/shared/ImagePickerField';
+import { CompanyContactCard } from './CompanyContactCard';
 import { useSiteSettings } from '@/hooks/useCatalog';
 import { useLogoMutations } from '@/hooks/useAdmin';
 import { resolveApiUrl } from '@/lib/api/client';
@@ -50,7 +51,7 @@ const AdminBrandingPage = () => {
 
   return (
     <div>
-      <PageHeader title="Branding" description="Change the website logo without touching code. It appears in the header, footer, login pages and dashboards." />
+      <PageHeader title="Branding & Contact" description="Change the website logo and the company address and contact details without touching code." />
       {site.isLoading ? (
         <LoadingSkeleton variant="page" />
       ) : site.error ? (
@@ -91,6 +92,11 @@ const AdminBrandingPage = () => {
           </Card>
         </div>
       )}
+      {site.data ? (
+        <div className="mt-6">
+          <CompanyContactCard site={site.data} />
+        </div>
+      ) : null}
       <ConfirmationDialog
         open={confirmRemove}
         onClose={() => setConfirmRemove(false)}

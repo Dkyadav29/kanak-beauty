@@ -11,6 +11,7 @@ import type {
   CertificateSettingsUpdate,
   CourseCategoryUpsertRequest,
   PolicySlug,
+  SiteContact,
   CourseUpsertRequest,
   DateRangeFilter,
   EnrollmentFilters,
@@ -73,6 +74,7 @@ export const useLogoMutations = () => {
     upload: useMutation({ mutationFn: ({ file, alt }: { file: File; alt: string }) => adminService.uploadLogo(file, alt), onSuccess: done }),
     updateAlt: useMutation({ mutationFn: (alt: string) => adminService.updateLogoAlt(alt), onSuccess: done }),
     remove: useMutation({ mutationFn: () => adminService.removeLogo(), onSuccess: done }),
+    updateContact: useMutation({ mutationFn: (p: SiteContact) => adminService.updateSiteContact(p), onSuccess: done }),
   };
 };
 export const usePolicyHistory = (slug: PolicySlug) => useQuery({ queryKey: queryKeys.admin.policyHistory(slug), queryFn: () => adminService.policyHistory(slug) });

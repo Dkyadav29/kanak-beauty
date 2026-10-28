@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { cn, formatDate } from '@/lib/utils';
+import { formatAmount } from '@/lib/coursePricing';
 import { ImageWithFallback } from '@/components/ui';
-import type { HeroSlideFocus } from '@/types';
+import type { HeroSlideCourse, HeroSlideFocus } from '@/types';
 
 export type { HeroSlideFocus };
 
@@ -16,6 +18,8 @@ export interface HeroSlide {
   caption: string;
   /** Which part of the photo stays visible when it is cropped to the frame. Defaults to center. */
   focus?: HeroSlideFocus;
+  /** Linked course: the whole slide opens it, and its live price/discount is shown. */
+  course?: HeroSlideCourse | null;
 }
 
 export const FOCUS_CLASS: Record<HeroSlideFocus, string> = {
@@ -56,6 +60,9 @@ export const HeroSlider = ({ slides, intervalMs = 6000, actions, className, rese
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const reduceMotion = useReducedMotion();
+  const navigate = useNavigate();
+  // Set while a swipe is in progress so the click that ends a drag does not open the course.
+  const dragging = useRef(false);
   const count = slides.length;
 
   const go = useCallback((next: number) => setIndex(((next % count) + count) % count), [count]);
@@ -74,7 +81,7 @@ export const HeroSlider = ({ slides, intervalMs = 6000, actions, className, rese
 
   return (
     <div
-      className={cn('group relative overflow-hidden rounded-[2rem] bg-charcoal-900 shadow-lift', className)}
+      className={cn('group relative overflow-hidden rounded-[2rem] bg-charcoal-900 shadow-lift', active.course && 'cursor-pointer', className)}
       role="region"
       aria-roledescription="carousel"
       aria-label="Academy highlights"
@@ -87,6 +94,11 @@ export const HeroSlider = ({ slides, intervalMs = 6000, actions, className, rese
         if (e.key === 'ArrowLeft') prev();
         if (e.key === 'ArrowRight') next();
       }}
+      onClick={(e) => {
+        // A click anywhere on a course slide opens the course; controls and links handle their own clicks.
+        if (!active.course || dragging.current || (e.target as HTMLElement).closest('a,button')) return;
+        navigate(`/courses/${active.course.slug}`);
+      }}
     >
       {/* Sliding track: every slide sits side by side, the track shifts by one slide width. */}
       <motion.div
@@ -96,7 +108,13 @@ export const HeroSlider = ({ slides, intervalMs = 6000, actions, className, rese
         drag={count > 1 ? 'x' : false}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.15}
+        onDragStart={() => {
+          dragging.current = true;
+        }}
         onDragEnd={(_, info) => {
+          window.setTimeout(() => {
+            dragging.current = false;
+          }, 0);
           if (info.offset.x < -SWIPE_THRESHOLD_PX) next();
           else if (info.offset.x > SWIPE_THRESHOLD_PX) prev();
         }}
@@ -152,8 +170,28 @@ export const HeroSlider = ({ slides, intervalMs = 6000, actions, className, rese
                   {active.eyebrow}
                 </span>
               ) : null}
-              {active.caption ? (
-                <h2 className="mt-4 font-display text-3xl font-semibold leading-[1.1] drop-shadow-sm sm:text-5xl lg:text-6xl">{active.caption}</h2>
+              {active.course?.isDiscountActive ? (
+                <span className="ml-2 inline-flex items-center rounded-full bg-rose-600 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-white shadow-sm">
+                  {active.course.discountPercent}% off
+                </span>
+              ) : null}
+              {active.caption || active.course ? (
+                <h2 className="mt-4 font-display text-3xl font-semibold leading-[1.1] drop-shadow-sm sm:text-5xl lg:text-6xl">{active.caption || active.course?.title}</h2>
+              ) : null}
+              {active.course ? (
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+                  <p className="flex items-baseline gap-2 drop-shadow-sm">
+                    <span className="font-display text-2xl font-semibold sm:text-3xl">{formatAmount(active.course.finalPrice, active.course.currency)}</span>
+                    {active.course.isDiscountActive ? <span className="text-sm text-white/70 line-through">{formatAmount(active.course.listPrice, active.course.currency)}</span> : null}
+                    {active.course.isDiscountActive && active.course.discountEndsAt ? <span className="text-xs text-gold-200">Offer ends {formatDate(active.course.discountEndsAt)}</span> : null}
+                  </p>
+                  <Link
+                    to={`/courses/${active.course.slug}`}
+                    className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-charcoal-900 shadow-sm transition hover:bg-gold-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  >
+                    View course <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
               ) : null}
             </motion.div>
           </AnimatePresence>

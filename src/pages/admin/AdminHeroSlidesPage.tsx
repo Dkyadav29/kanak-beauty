@@ -3,10 +3,11 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowDown, ArrowUp, Eye, EyeOff, ImagePlus, Link2, Pencil, Plus, Trash2, Upload } from 'lucide-react';
-import { useAdminHeroSlides, useHeroSlideMutations } from '@/hooks/useAdmin';
+import { useAdminCourses, useAdminHeroSlides, useHeroSlideMutations } from '@/hooks/useAdmin';
 import { resolveApiUrl } from '@/lib/api/client';
 import { getErrorMessage } from '@/lib/api/errors';
 import { cn } from '@/lib/utils';
+import { formatAmount } from '@/lib/coursePricing';
 import type { AdminHeroSlide, HeroSlideFocus, HeroSlideInput } from '@/types';
 import { FOCUS_CLASS } from '@/components/shared/HeroSlider';
 import {
@@ -51,6 +52,7 @@ const schema = z
     caption: z.string().trim().max(160, 'Keep the caption under 160 characters'),
     focus: z.enum(['center', 'top', 'bottom', 'left', 'right', 'left-top', 'right-top', 'left-bottom', 'right-bottom']),
     isActive: z.boolean(),
+    courseId: z.string(),
   })
   .superRefine((v, ctx) => {
     if (v.source === 'url' && !/^https?:\/\/\S+$/i.test(v.imageUrl)) {
@@ -67,6 +69,7 @@ const defaultsFor = (slide: AdminHeroSlide | null): FormValues => ({
   caption: slide?.caption ?? '',
   focus: slide?.focus ?? 'center',
   isActive: slide?.isActive ?? true,
+  courseId: slide?.courseId ?? '',
 });
 
 /** Banner-shaped preview that crops exactly like the home page slider. */
@@ -76,6 +79,7 @@ const SlidePreview = ({ src, alt, focus, className }: { src?: string; alt: strin
 
 const HeroSlideFormDialog = ({ open, slide, onClose }: { open: boolean; slide: AdminHeroSlide | null; onClose: () => void }) => {
   const { create, update } = useHeroSlideMutations();
+  const courses = useAdminCourses();
   const toast = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -93,6 +97,8 @@ const HeroSlideFormDialog = ({ open, slide, onClose }: { open: boolean; slide: A
   const imageUrl = watch('imageUrl');
   const focus = watch('focus');
   const alt = watch('alt');
+  const courseId = watch('courseId');
+  const linkedCourse = courses.data?.find((c) => c.id === courseId);
 
   const fileUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   useEffect(() => () => (fileUrl ? URL.revokeObjectURL(fileUrl) : undefined), [fileUrl]);
@@ -109,7 +115,7 @@ const HeroSlideFormDialog = ({ open, slide, onClose }: { open: boolean; slide: A
   };
 
   const submit = async (v: FormValues) => {
-    const input: HeroSlideInput = { alt: v.alt, eyebrow: v.eyebrow, caption: v.caption, focus: v.focus, isActive: v.isActive };
+    const input: HeroSlideInput = { alt: v.alt, eyebrow: v.eyebrow, caption: v.caption, focus: v.focus, isActive: v.isActive, courseId: v.courseId };
     if (v.source === 'upload') {
       if (file) input.image = file;
       else if (!slide?.imageUploaded) return setFileError('Choose an image to upload.');
@@ -195,6 +201,25 @@ const HeroSlideFormDialog = ({ open, slide, onClose }: { open: boolean; slide: A
             <Input id="heroCaption" invalid={!!formState.errors.caption} {...register('caption')} />
           </FormField>
         </div>
+
+        <FormField label="Link to course" htmlFor="heroCourse" hint="Optional. Clicking the slide opens this course, and its price and any active discount are shown on the slide automatically.">
+          <Select id="heroCourse" {...register('courseId')}>
+            <option value="">No course (image only)</option>
+            {courses.data?.filter((c) => c.status !== 'archived' || c.id === courseId).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+                {c.status !== 'published' ? ` (${c.status})` : ''}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        {linkedCourse ? (
+          <p className="-mt-2 rounded-lg bg-ivory-100 px-3 py-2 text-xs text-charcoal-700">
+            Shown on the slide: <span className="font-semibold">{formatAmount(linkedCourse.pricing.finalPrice, linkedCourse.currency)}</span>
+            {linkedCourse.pricing.isDiscountActive ? ` (was ${formatAmount(linkedCourse.pricing.listPrice, linkedCourse.currency)}, ${linkedCourse.pricing.discountPercent}% off)` : ' (no active discount)'}
+            {linkedCourse.status !== 'published' ? ' · the link goes live once the course is published.' : ''}
+          </p>
+        ) : null}
 
         <Checkbox id="heroActive" label="Show on the home page" description="Hidden slides stay here and can be shown again later." {...register('isActive')} />
       </form>
@@ -298,6 +323,7 @@ const AdminHeroSlidesPage = () => {
                     <Badge tone={s.isActive ? 'success' : 'neutral'} dot>
                       {s.isActive ? 'Visible' : 'Hidden'}
                     </Badge>
+                    {s.courseTitle ? <Badge tone={s.courseStatus === 'published' ? 'rose' : 'warning'}>Course: {s.courseTitle}{s.courseStatus !== 'published' ? ` (${s.courseStatus})` : ''}</Badge> : null}
                     <Badge tone="info">
                       <span className="inline-flex items-center gap-1">
                         {s.imageUploaded ? <Upload className="h-3 w-3" aria-hidden /> : <Link2 className="h-3 w-3" aria-hidden />}

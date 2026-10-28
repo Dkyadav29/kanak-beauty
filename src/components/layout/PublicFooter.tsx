@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
-import { Instagram, Facebook, Youtube, Mail, Phone, MapPin } from 'lucide-react';
-import { useCourses } from '@/hooks/useCatalog';
+import { Instagram, Facebook, Youtube, Mail, Phone, MapPin, MessageCircle, Clock3 } from 'lucide-react';
+import { useCourses, useSiteSettings } from '@/hooks/useCatalog';
+import { contactLines } from '@/lib/siteContact';
 import { Logo } from '@/components/ui';
 
 const FOOTER_COURSE_LIMIT = 5;
+const CONTACT_ICON = { email: Mail, phone: Phone, whatsapp: MessageCircle, address: MapPin, hours: Clock3 } as const;
+
 
 type FooterLink = { to: string; label: string };
 
@@ -64,6 +67,33 @@ const columns = [
   },
 ];
 
+/** Company contact details managed in Admin > Branding. */
+const FooterContact = () => {
+  const site = useSiteSettings();
+  const lines = contactLines(site.data);
+  if (!lines.length) return null;
+  return (
+    <ul className="mt-6 space-y-2.5 text-sm text-charcoal-700">
+      {lines.map((l) => {
+        const Icon = CONTACT_ICON[l.kind];
+        const body = <span className="whitespace-pre-line">{l.value}</span>;
+        return (
+          <li key={l.kind} className="flex items-start gap-2.5">
+            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" aria-label={l.label} />
+            {l.href ? (
+              <a href={l.href} className="hover:text-rose-700" {...(l.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+                {body}
+              </a>
+            ) : (
+              body
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+};
+
 export const PublicFooter = () => (
   <footer className="border-t border-ivory-300 bg-white">
     <div className="container-x grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-5">
@@ -72,17 +102,7 @@ export const PublicFooter = () => (
         <p className="mt-4 max-w-sm text-sm leading-relaxed text-charcoal-500">
           Kanak Beauty Service trains aspiring makeup artists, hairstylists, skincare specialists and salon professionals through expert-led, practical education.
         </p>
-        <ul className="mt-6 space-y-2.5 text-sm text-charcoal-700">
-          <li className="flex items-center gap-2.5">
-            <Mail className="h-4 w-4 text-rose-600" /> admin@kanakbeautyservice.com
-          </li>
-          <li className="flex items-center gap-2.5">
-            <Phone className="h-4 w-4 text-rose-600" /> +91 62072 83072
-          </li>
-          <li className="flex items-start gap-2.5">
-            <MapPin className="mt-0.5 h-4 w-4 text-rose-600" /> Academy address to be configured
-          </li>
-        </ul>
+        <FooterContact />
         <div className="mt-6 flex gap-2">
           {[
             { icon: Instagram, label: 'Instagram' },

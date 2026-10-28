@@ -36,7 +36,7 @@ const HomePage = () => {
   const homeVideo = useHomeVideo();
   const { isAuthenticated } = useAuth();
   const slides = useMemo(
-    () => (heroSlides.data ?? []).map((s) => ({ id: s.id, src: resolveApiUrl(s.imageUrl), alt: s.alt, eyebrow: s.eyebrow, caption: s.caption, focus: s.focus })),
+    () => (heroSlides.data ?? []).map((s) => ({ id: s.id, src: resolveApiUrl(s.imageUrl), alt: s.alt, eyebrow: s.eyebrow, caption: s.caption, focus: s.focus, course: s.course })),
     [heroSlides.data],
   );
   // Fits the screen whatever the photo size: a viewport-based height, cropped with object-cover + focus.

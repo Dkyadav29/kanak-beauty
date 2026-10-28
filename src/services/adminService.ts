@@ -44,6 +44,7 @@ import type {
   CourseCategoryUpsertRequest,
   PolicySlug,
   PolicyVersion,
+  SiteContact,
   SiteSettings,
   TrainerUpsertRequest,
   BatchCertificateResult,
@@ -231,6 +232,7 @@ export const adminService = {
   },
   updateLogoAlt: async (alt: string) => (await apiClient.post<SiteSettings>('/admin/site-logo', { alt })).data,
   removeLogo: async () => (await apiClient.delete<SiteSettings>('/admin/site-logo')).data,
+  updateSiteContact: async (payload: SiteContact) => (await apiClient.put<SiteSettings>('/admin/site-contact', payload)).data,
   policyHistory: async (slug: PolicySlug) => (await apiClient.get<PolicyVersion[]>(`/admin/policies/${slug}`)).data,
   publishPolicy: async (slug: PolicySlug, payload: { title: string; summary: string; content: string }) =>
     (await apiClient.post<PolicyVersion>(`/admin/policies/${slug}`, payload)).data,
