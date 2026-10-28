@@ -46,6 +46,8 @@ interface HeroSliderProps {
 }
 
 const SWIPE_THRESHOLD_PX = 60;
+// Pointer travel up to this still counts as a click on the slide rather than a swipe.
+const CLICK_SLOP_PX = 10;
 
 const glassButton =
   'flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white';
@@ -61,8 +63,8 @@ export const HeroSlider = ({ slides, intervalMs = 6000, actions, className, rese
   const [paused, setPaused] = useState(false);
   const reduceMotion = useReducedMotion();
   const navigate = useNavigate();
-  // Set while a swipe is in progress so the click that ends a drag does not open the course.
-  const dragging = useRef(false);
+  // Where the pointer went down, so the click that ends a swipe does not open the course.
+  const pressAt = useRef<{ x: number; y: number } | null>(null);
   const count = slides.length;
 
   const go = useCallback((next: number) => setIndex(((next % count) + count) % count), [count]);
@@ -94,9 +96,15 @@ export const HeroSlider = ({ slides, intervalMs = 6000, actions, className, rese
         if (e.key === 'ArrowLeft') prev();
         if (e.key === 'ArrowRight') next();
       }}
+      onPointerDown={(e) => {
+        pressAt.current = { x: e.clientX, y: e.clientY };
+      }}
       onClick={(e) => {
         // A click anywhere on a course slide opens the course; controls and links handle their own clicks.
-        if (!active.course || dragging.current || (e.target as HTMLElement).closest('a,button')) return;
+        const start = pressAt.current;
+        pressAt.current = null;
+        const swiped = start ? Math.hypot(e.clientX - start.x, e.clientY - start.y) > CLICK_SLOP_PX : false;
+        if (!active.course || swiped || (e.target as HTMLElement).closest('a,button')) return;
         navigate(`/courses/${active.course.slug}`);
       }}
     >
@@ -108,13 +116,7 @@ export const HeroSlider = ({ slides, intervalMs = 6000, actions, className, rese
         drag={count > 1 ? 'x' : false}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.15}
-        onDragStart={() => {
-          dragging.current = true;
-        }}
         onDragEnd={(_, info) => {
-          window.setTimeout(() => {
-            dragging.current = false;
-          }, 0);
           if (info.offset.x < -SWIPE_THRESHOLD_PX) next();
           else if (info.offset.x > SWIPE_THRESHOLD_PX) prev();
         }}
